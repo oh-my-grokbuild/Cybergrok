@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch Grok Build as the Cybergrok agent with this plugin and toolchain on PATH.
+# Launch Grok Build as the Cybergrok session agent with this plugin and toolchain on PATH.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,5 +27,18 @@ if ! command -v grok >/dev/null 2>&1; then
   exit 1
 fi
 
-# Prefer an explicit plugin dir so skills/agents/hooks/MCP load even outside config.
-exec grok "$@"
+AGENT_FILE="${SCRIPT_DIR}/.grok/agents/cybergrok.md"
+if [ ! -f "${AGENT_FILE}" ]; then
+  AGENT_FILE="${SCRIPT_DIR}/agents/cybergrok.md"
+fi
+export GROK_AGENT="${GROK_AGENT:-${AGENT_FILE}}"
+
+GROK_ARGS=()
+# Prefer the session agent definition (project .grok/agents/ or plugin agents/).
+GROK_ARGS+=(--agent "${GROK_AGENT}")
+# Folder trust unlocks project plugins, hooks, and repo-local MCP.
+if grok --help 2>/dev/null | grep -q -- '--trust'; then
+  GROK_ARGS+=(--trust)
+fi
+
+exec grok "${GROK_ARGS[@]}" "$@"

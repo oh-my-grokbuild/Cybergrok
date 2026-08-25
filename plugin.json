@@ -1,7 +1,7 @@
 {
   "name": "cybergrok",
   "version": "1.0.0",
-  "description": "Autonomous offensive security, bug bounty, and red-teaming plugin for Grok Build. Ports Cybermes playbooks onto the grok-build agent named Cybergrok. Core engine is Python + TypeScript (no Go, no Hermes).",
+  "description": "Autonomous offensive security plugin for Grok Build. Session agent Cybergrok, Python tools, TypeScript MCP. Ports Cybermes playbooks (no Go, no Hermes).",
   "author": {
     "name": "Grok Build Workforce"
   },

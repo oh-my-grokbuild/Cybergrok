@@ -2,7 +2,7 @@
   "mcpServers": {
     "cybergrok": {
       "command": "node",
-      "args": ["mcp/launch.cjs"]
+      "args": ["${GROK_PLUGIN_ROOT}/mcp/launch.cjs"]
     }
   }
 }

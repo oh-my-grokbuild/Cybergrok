@@ -1,5 +1,5 @@
 ---
-name: doctor
+name: cybergrok-doctor
 description: Diagnose the Cybergrok toolchain, plugin files, and Grok Build readiness.
 ---
 

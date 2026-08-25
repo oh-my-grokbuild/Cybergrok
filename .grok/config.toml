@@ -1,6 +1,10 @@
 # Project-local Grok Build config.
-# Treat this repository as the Cybergrok plugin when you launch grok from the checkout.
+# Session agent files live in .grok/agents/ (user/project agent discovery).
+# The plugin package also lives at .grok/plugins/cybergrok/ (requires folder trust).
 
 [plugins]
-paths = ["."]
 enabled = ["cybergrok"]
+
+[mcp_servers.cybergrok]
+command = "node"
+args = ["mcp/launch.cjs"]
