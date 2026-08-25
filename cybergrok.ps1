@@ -1,7 +1,8 @@
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $env:CYBERGROK_DIR = $ScriptDir
 $env:CYBERGROK_ROOT = $ScriptDir
-$env:PATH = "$ScriptDir\tools\bin;$ScriptDir\bin;$ScriptDir\venv\Scripts;$env:PATH"
+if (-not $env:GROK_WORKSPACE_ROOT) { $env:GROK_WORKSPACE_ROOT = (Get-Location).Path }
+$env:PATH = "$ScriptDir\tools\wrappers;$ScriptDir\tools\bin;$ScriptDir\bin;$ScriptDir\venv\Scripts;$env:PATH"
 
 if (Test-Path "$ScriptDir\.env") {
     Get-Content "$ScriptDir\.env" | ForEach-Object {

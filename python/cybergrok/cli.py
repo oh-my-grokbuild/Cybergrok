@@ -140,7 +140,7 @@ def main_aggregate_reports(argv: list[str] | None = None) -> int:
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
-        print("Usage: python -m cybergrok <smart_pipe|secret_scan|search_knowledge|aggregate_reports|rpc> ...")
+        print("Usage: python -m cybergrok <smart_pipe|secret_scan|search_knowledge|aggregate_reports|rpc|wrap> ...")
         return 1
     cmd, rest = argv[0], argv[1:]
     if cmd == "smart_pipe":
@@ -158,5 +158,9 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(loads_and_run(raw))
         return 0
+    if cmd == "wrap":
+        from .wrap import main_wrap
+
+        return main_wrap(rest)
     print(f"Unknown command: {cmd}", file=sys.stderr)
     return 1

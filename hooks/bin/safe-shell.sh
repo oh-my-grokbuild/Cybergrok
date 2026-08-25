@@ -28,7 +28,7 @@ if [ -z "${CMD}" ]; then
 fi
 
 if printf '%s' "${CMD}" | grep -Eqi \
-  '(rm[[:space:]]+-[a-zA-Z]*r[a-zA-Z]*f[[:space:]]|rm[[:space:]]+-[a-zA-Z]*f[a-zA-Z]*r[[:space:]]|rm[[:space:]]+--no-preserve-root|mkfs|dd[[:space:]]+(if=|of=)|:\(\)\{[[:space:]]*:\|:\&[[:space:]]*;[[:space:]]*:|curl[^|;]*\|[[:space:]]*(ba)?sh|wget[^|;]*\|[[:space:]]*(ba)?sh|curl[^|;]*\|[[:space:]]*python|wget[^|;]*\|[[:space:]]*python|chmod[[:space:]]+-R[[:space:]]+777|python[0-9.]*[[:space:]]+-c[[:space:]]|perl[[:space:]]+-e[[:space:]])'; then
+  '(rm[[:space:]]+(-[a-zA-Z]*r[a-zA-Z]*f|-rf/|--recursive|--force)|rm[[:space:]]+-[a-zA-Z]*f[a-zA-Z]*r|rm[[:space:]]+--no-preserve-root|mkfs|dd[[:space:]]+(if=|of=)|:\(\)\{|:[[:space:]]*\|[[:space:]]*:|curl[^|;]*\|[[:space:]]*(/bin/)?(ba)?sh|wget[^|;]*\|[[:space:]]*(/bin/)?(ba)?sh|curl[^|;]*\|[[:space:]]*(python|zsh)|wget[^|;]*\|[[:space:]]*(python|zsh)|chmod([[:space:]]+-R|[[:space:]].*-R)|python[0-9.]*[[:space:]]+-c|perl[[:space:]]+-e|node[[:space:]]+-e|ruby[[:space:]]+-e)'; then
   echo '{"decision":"deny","reason":"Cybergrok blocked a destructive or pipe-to-shell command."}'
   exit 2
 fi

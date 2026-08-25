@@ -5,7 +5,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export CYBERGROK_DIR="${SCRIPT_DIR}"
 export CYBERGROK_ROOT="${SCRIPT_DIR}"
-export PATH="${SCRIPT_DIR}/tools/bin:${SCRIPT_DIR}/bin:${SCRIPT_DIR}/venv/bin:${PATH}"
+export GROK_WORKSPACE_ROOT="${GROK_WORKSPACE_ROOT:-${PWD}}"
+export PATH="${SCRIPT_DIR}/tools/wrappers:${SCRIPT_DIR}/tools/bin:${SCRIPT_DIR}/bin:${SCRIPT_DIR}/venv/bin:${PATH}"
 umask 0002
 
 if [ -f "${SCRIPT_DIR}/.env" ]; then

@@ -39,7 +39,8 @@ validate exploits with deterministic proof, and write structured reports.
 ## Phase pipeline
 
 1. **Passive recon** — `subfinder`, `gau`; write `recon/<SLUG>/`.
-2. **Active probe** — `httpx`, `katana`, `ffuf` via `smart_pipe`.
+2. **Active probe** — `httpx`, `katana`, `ffuf` via `smart_pipe`, only
+   against workspace `scope.yaml` `in_scope` hosts.
 3. **Skill execution** — pick playbooks from `skills/` (`hunt-idor`,
    `hunt-xss`, `jwt-oauth-token-attacks`, …) or MCP
    `cybergrok_list_skills` / `cybergrok_get_skill`.
