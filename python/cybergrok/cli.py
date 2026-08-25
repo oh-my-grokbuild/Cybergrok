@@ -53,7 +53,9 @@ def main_secret_scan(argv: list[str] | None = None) -> int:
             elif p.is_file():
                 findings.extend(secrets.scan_file(p))
     for item in findings:
-        print(json.dumps(item.to_dict()))
+        payload = item.to_dict()
+        payload["match"] = secrets.mask_secret(payload["match"])
+        print(json.dumps(payload))
     return 0
 
 
@@ -133,6 +135,9 @@ def main(argv: list[str] | None = None) -> int:
         return main_aggregate_reports(rest)
     if cmd == "rpc":
         raw = sys.stdin.read() if not rest else rest[0]
+        if not raw.strip():
+            print(json.dumps({"ok": False, "error": "empty RPC payload"}))
+            return 1
         print(loads_and_run(raw))
         return 0
     print(f"Unknown command: {cmd}", file=sys.stderr)

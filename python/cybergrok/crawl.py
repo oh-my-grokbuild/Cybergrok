@@ -9,10 +9,12 @@ import subprocess
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPSHandler, Request, build_opener
 
+from .netguard import UnsafeURL, assert_safe_url
+from .probe import GuardedRedirectHandler
 from .stream import score_line
 
 HREF_RE = re.compile(r"""(?i)(?:href|src|action)=["']([^"'#\s>]+)["']""")
@@ -37,7 +39,7 @@ class CrawlResult:
 def find_katana(tools_dir: Path | None = None) -> str | None:
     if tools_dir:
         for name in ("katana", "katana.exe"):
-            cand = tools_dir / "bin" / name
+            cand = Path(tools_dir) / "bin" / name
             if cand.is_file():
                 return str(cand)
     return shutil.which("katana")
@@ -60,41 +62,63 @@ def _run_katana(url: str, depth: int, timeout: int, binary: str) -> list[str]:
 def _resolve(base: str, ref: str) -> str:
     if not ref or ref.startswith(("javascript:", "mailto:", "data:")):
         return ""
-    if "://" in ref:
-        return ref
-    return urljoin(base if base.endswith("/") else base + "/", ref)
+    return urljoin(base, ref)
 
 
-def _native_crawl(url: str, depth: int, timeout: int, user_agent: str) -> list[str]:
-    parsed = urlparse(url)
-    ctx = ssl._create_unverified_context()
+def _fetch(opener, url: str, user_agent: str, timeout: int) -> str:
+    req = Request(url, headers={"User-Agent": user_agent})
+    try:
+        with opener.open(req, timeout=min(5, timeout)) as resp:
+            return resp.read(512 * 1024).decode("utf-8", errors="ignore")
+    except HTTPError as exc:
+        if exc.fp:
+            return exc.read(512 * 1024).decode("utf-8", errors="ignore")
+        return ""
+    except (URLError, TimeoutError, OSError):
+        return ""
+
+
+def _native_crawl(url: str, depth: int, timeout: int, user_agent: str, allow_private: bool) -> list[str]:
+    seed = assert_safe_url(url, allow_private=allow_private)
+    parsed = urlparse(seed)
+    ctx = ssl.create_default_context()
+    opener = build_opener(GuardedRedirectHandler(allow_private=allow_private, follow=False), HTTPSHandler(context=ctx))
     visited: set[str] = set()
     endpoints: set[str] = set()
-    queue = [url]
+    queue = [seed]
     max_pages = 30
     for _ in range(max(1, depth)):
         nxt: list[str] = []
         for cur in queue:
             if cur in visited or len(visited) >= max_pages:
                 continue
-            visited.add(cur)
-            req = Request(cur, headers={"User-Agent": user_agent})
             try:
-                with urlopen(req, timeout=min(5, timeout), context=ctx) as resp:
-                    body = resp.read(512 * 1024).decode("utf-8", errors="ignore")
-            except (URLError, TimeoutError, OSError):
+                assert_safe_url(cur, allow_private=allow_private)
+            except UnsafeURL:
+                continue
+            visited.add(cur)
+            body = _fetch(opener, cur, user_agent, timeout)
+            if not body:
                 continue
             for m in HREF_RE.finditer(body):
-                resolved = _resolve(url, m.group(1).strip())
+                resolved = _resolve(cur, m.group(1).strip())
                 if not resolved:
                     continue
-                endpoints.add(resolved)
-                if urlparse(resolved).hostname == parsed.hostname:
-                    nxt.append(resolved)
+                try:
+                    safe = assert_safe_url(resolved, allow_private=allow_private)
+                except UnsafeURL:
+                    continue
+                endpoints.add(safe)
+                if urlparse(safe).hostname == parsed.hostname:
+                    nxt.append(safe)
             for m in API_RE.finditer(body):
-                resolved = _resolve(url, m.group(1).strip())
-                if resolved:
-                    endpoints.add(resolved)
+                resolved = _resolve(cur, m.group(1).strip())
+                if not resolved:
+                    continue
+                try:
+                    endpoints.add(assert_safe_url(resolved, allow_private=allow_private))
+                except UnsafeURL:
+                    continue
         queue = nxt
     return list(endpoints)
 
@@ -108,7 +132,9 @@ def crawl_target(
     output_dir: Path | None = None,
     prefer_katana: bool = True,
     user_agent: str = "Mozilla/5.0 (compatible; Cybergrok/1.0; Recon Crawler)",
+    allow_private: bool = False,
 ) -> CrawlResult:
+    assert_safe_url(url, allow_private=allow_private)
     started = time.monotonic()
     engine = "native_python"
     raw: list[str] = []
@@ -119,19 +145,23 @@ def crawl_target(
             if raw:
                 engine = "katana"
     if not raw:
-        raw = _native_crawl(url, depth, timeout, user_agent)
+        raw = _native_crawl(url, depth, timeout, user_agent, allow_private=allow_private)
 
     unique: dict[str, int] = {}
     for ep in raw:
         ep = ep.strip()
         if not ep or ep in unique:
             continue
+        try:
+            ep = assert_safe_url(ep, allow_private=allow_private)
+        except UnsafeURL:
+            continue
         unique[ep] = score_line(ep)
     scored = sorted(({"score": s, "text": t} for t, s in unique.items()), key=lambda x: (-x["score"], len(x["text"])))
     saved = ""
     if output_dir:
         output_dir.mkdir(parents=True, exist_ok=True)
-        dest = output_dir / "katana.txt"
+        dest = output_dir / f"{engine}.txt"
         dest.write_text("".join(item["text"] + "\n" for item in scored), encoding="utf-8")
         saved = str(dest)
     top = scored[: max(1, max_endpoints)]

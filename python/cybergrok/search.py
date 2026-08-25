@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
@@ -45,8 +46,9 @@ class Searcher:
         mapped = KB_MAPPING.get(source, "")
         if mapped:
             candidate = self.base_dir / mapped
-            if candidate.is_dir():
-                search_path = candidate
+            if not candidate.is_dir():
+                return []
+            search_path = candidate
 
         keywords = [t for t in query.lower().split() if len(t) > 1]
         if not keywords:
@@ -65,16 +67,14 @@ class Searcher:
         files: list[Path] = []
         if not search_path.is_dir():
             return []
-        for p in search_path.rglob("*"):
-            if p.is_dir() and p.name in SKIP_DIRS:
-                continue
-            if not p.is_file():
-                continue
-            name = p.name.lower()
-            if name in SKIP_NAMES:
-                continue
-            if name.endswith((".md", ".txt")):
-                files.append(p)
+        for dirpath, dirnames, filenames in os.walk(search_path):
+            dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+            for filename in filenames:
+                name = filename.lower()
+                if name in SKIP_NAMES:
+                    continue
+                if name.endswith((".md", ".txt")):
+                    files.append(Path(dirpath) / filename)
 
         scored: list[tuple[Path, int]] = []
 

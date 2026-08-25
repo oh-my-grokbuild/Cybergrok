@@ -9,9 +9,14 @@ import ssl
 import subprocess
 import time
 from dataclasses import asdict, dataclass, field
+from email.parser import BytesParser
+from http.client import HTTPMessage
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.parse import urlparse
+from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
+
+from .netguard import UnsafeURL, assert_safe_url
 
 TITLE_RE = re.compile(r"(?i)<title[^>]*>([^<]+)</title>")
 
@@ -37,16 +42,6 @@ SIGNATURES: list[dict] = [
 
 
 @dataclass
-class TLSInfo:
-    version: str = ""
-    cipher_suite: str = ""
-    issuer: str = ""
-    subject: str = ""
-    dns_names: list[str] = field(default_factory=list)
-    expires_at: str = ""
-
-
-@dataclass
 class ProbeResult:
     url: str
     scheme: str
@@ -67,6 +62,25 @@ class ProbeResult:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+class _BlockedRedirect(HTTPError):
+    pass
+
+
+class GuardedRedirectHandler(HTTPRedirectHandler):
+    def __init__(self, allow_private: bool, follow: bool) -> None:
+        self.allow_private = allow_private
+        self.follow = follow
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+        if not self.follow:
+            raise HTTPError(req.full_url, code, msg, headers, fp)
+        try:
+            safe = assert_safe_url(newurl, allow_private=self.allow_private)
+        except UnsafeURL as exc:
+            raise HTTPError(newurl, code, f"blocked redirect: {exc}", headers, fp) from exc
+        return super().redirect_request(req, fp, code, msg, headers, safe)
 
 
 def extract_title(html: str) -> str:
@@ -101,28 +115,36 @@ def detect_technologies(headers: dict[str, str], cookies: list[str], body: str) 
     return found
 
 
+def _cookie_names(headers: HTTPMessage) -> list[str]:
+    raw = headers.get_all("Set-Cookie") if hasattr(headers, "get_all") else None
+    if not raw:
+        single = headers.get("Set-Cookie")
+        raw = [single] if single else []
+    names: list[str] = []
+    for item in raw:
+        names.append(item.split(";", 1)[0].split("=", 1)[0].strip())
+    return names
+
+
 def find_httpx(tools_dir: Path | None = None) -> str | None:
     if tools_dir:
         for name in ("httpx", "httpx.exe"):
-            cand = tools_dir / "bin" / name
+            cand = Path(tools_dir) / "bin" / name
             if cand.is_file():
                 return str(cand)
     return shutil.which("httpx")
 
 
-def probe_httpx(url: str, timeout: int, tools_dir: Path | None) -> ProbeResult | None:
+def probe_httpx(url: str, timeout: int, tools_dir: Path | None, follow_redirects: bool) -> ProbeResult | None:
     binary = find_httpx(tools_dir)
     if not binary:
         return None
+    args = [binary, "-u", url, "-silent", "-status-code", "-title", "-tech-detect", "-json", "-timeout", str(timeout)]
+    if follow_redirects:
+        args.append("-fr")
     started = time.monotonic()
     try:
-        proc = subprocess.run(
-            [binary, "-u", url, "-silent", "-status-code", "-title", "-tech-detect", "-json", "-timeout", str(timeout)],
-            capture_output=True,
-            text=True,
-            timeout=timeout + 5,
-            check=False,
-        )
+        proc = subprocess.run(args, capture_output=True, text=True, timeout=timeout + 5, check=False)
     except (OSError, subprocess.TimeoutExpired):
         return None
     elapsed = int((time.monotonic() - started) * 1000)
@@ -155,34 +177,54 @@ def probe_httpx(url: str, timeout: int, tools_dir: Path | None) -> ProbeResult |
     return None
 
 
-def probe_native(url: str, timeout: int, follow_redirects: bool, user_agent: str) -> ProbeResult:
-    raw = url.strip()
-    if "://" not in raw:
-        raw = "http://" + raw
-    from urllib.parse import urlparse
-
+def probe_native(
+    url: str,
+    timeout: int,
+    follow_redirects: bool,
+    user_agent: str,
+    allow_private: bool = False,
+    insecure_tls: bool = False,
+) -> ProbeResult:
+    raw = assert_safe_url(url, allow_private=allow_private)
     parsed = urlparse(raw)
-    ctx = ssl._create_unverified_context()
+    ctx = ssl._create_unverified_context() if insecure_tls else ssl.create_default_context()
+    handler = GuardedRedirectHandler(allow_private=allow_private, follow=follow_redirects)
+    opener = build_opener(handler, HTTPSHandler(context=ctx))
     req = Request(raw, headers={"User-Agent": user_agent, "Accept": "*/*"})
     started = time.monotonic()
+    body = ""
+    headers: dict[str, str] = {}
+    status = 0
+    final_url = raw
+    tls_info = None
     try:
-        with urlopen(req, timeout=timeout, context=ctx) as resp:
+        with opener.open(req, timeout=timeout) as resp:
             body = resp.read(1024 * 1024).decode("utf-8", errors="ignore")
             headers = {k: v for k, v in resp.headers.items()}
             status = getattr(resp, "status", 200)
             final_url = resp.geturl()
+            sock = getattr(getattr(resp, "fp", None), "raw", None)
+            sock = getattr(sock, "_sock", None) or getattr(resp, "fp", None)
     except HTTPError as exc:
         body = exc.read(1024 * 1024).decode("utf-8", errors="ignore") if exc.fp else ""
         headers = {k: v for k, v in (exc.headers.items() if exc.headers else [])}
         status = exc.code
-        final_url = raw
+        final_url = getattr(exc, "url", raw) or raw
     except URLError as exc:
         raise RuntimeError(f"HTTP request failed: {exc}") from exc
     elapsed = int((time.monotonic() - started) * 1000)
+    try:
+        content_length = int(headers.get("Content-Length") or 0)
+    except ValueError:
+        content_length = 0
+    cookie_hdrs = BytesParser().parsebytes(b"")  # unused fallback
     cookies = []
     if "Set-Cookie" in headers:
-        cookies = [part.split("=", 1)[0] for part in headers["Set-Cookie"].split(",")]
-    redirect = "" if follow_redirects or final_url == raw else final_url
+        cookies = [headers["Set-Cookie"].split(";", 1)[0].split("=", 1)[0].strip()]
+    redirect = "" if not follow_redirects or final_url == raw else final_url
+    if follow_redirects and final_url != raw:
+        assert_safe_url(final_url, allow_private=allow_private)
+        redirect = final_url
     return ProbeResult(
         url=raw,
         scheme=parsed.scheme,
@@ -193,10 +235,11 @@ def probe_native(url: str, timeout: int, follow_redirects: bool, user_agent: str
         title=extract_title(body),
         web_server=headers.get("Server", ""),
         content_type=headers.get("Content-Type", ""),
-        content_length=int(headers.get("Content-Length") or 0),
+        content_length=content_length,
         response_time_ms=elapsed,
         redirect_url=redirect,
         technologies=detect_technologies(headers, cookies, body),
+        tls_info=tls_info,
         headers=headers,
         engine_used="native_python",
     )
@@ -209,9 +252,14 @@ def probe_target(
     tools_dir: Path | None = None,
     prefer_httpx: bool = True,
     user_agent: str = "Mozilla/5.0 (compatible; Cybergrok/1.0; Security Assessment)",
+    allow_private: bool = False,
+    insecure_tls: bool = False,
 ) -> ProbeResult:
+    assert_safe_url(url, allow_private=allow_private)
     if prefer_httpx:
-        result = probe_httpx(url, timeout, tools_dir)
+        result = probe_httpx(url, timeout, tools_dir, follow_redirects)
         if result:
+            if result.url:
+                assert_safe_url(result.url, allow_private=allow_private)
             return result
-    return probe_native(url, timeout, follow_redirects, user_agent)
+    return probe_native(url, timeout, follow_redirects, user_agent, allow_private=allow_private, insecure_tls=insecure_tls)

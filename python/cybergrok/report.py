@@ -50,7 +50,16 @@ def clean_value(val: str) -> str:
 
 
 def sanitize_slug(value: str) -> str:
-    return SLUG_RE.sub("_", value.lower()).strip("_")
+    raw = (value or "").strip()
+    if "://" in raw or raw.startswith("http"):
+        from urllib.parse import urlparse
+
+        parsed = urlparse(raw if "://" in raw else "http://" + raw)
+        host = (parsed.hostname or "").lower()
+        port = f"_{parsed.port}" if parsed.port else ""
+        raw = f"{host}{port}" if host else raw
+    slug = SLUG_RE.sub("_", raw.lower()).strip("_")
+    return slug or "target"
 
 
 @dataclass
@@ -268,7 +277,24 @@ def record_finding(
     for d in (findings_dir, pocs_dir, evidence_dir):
         d.mkdir(parents=True, exist_ok=True)
 
-    vuln = sanitize_slug(title)[:40]
+    if sev in {"info", "informational"}:
+        note = evidence_dir / "recon_notes.md"
+        block = (
+            f"\n## {title}\n\n- **Endpoint**: `{endpoint}`\n\n{description}\n\n"
+            f"{reproduction_steps}\n"
+        )
+        with note.open("a", encoding="utf-8") as fh:
+            fh.write(block)
+        aggregate_target(target_dir)
+        return {
+            "file": f"reports/{slug}/evidence/recon_notes.md",
+            "target": slug,
+            "severity": "INFORMATIONAL",
+            "summary": f"reports/{slug}/SUMMARY.md",
+            "routed": "evidence",
+        }
+
+    vuln = sanitize_slug(title)[:40] or "finding"
     finding_name = f"{sev}_{vuln}.md"
     body = [
         f"# {title}",

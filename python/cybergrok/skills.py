@@ -37,9 +37,9 @@ def list_skills(skills_dir: Path) -> list[SkillMetadata]:
     skills: list[SkillMetadata] = []
     if not skills_dir.is_dir():
         return skills
-    for entry in sorted(skills_dir.iterdir()):
-        skill_file = entry / "SKILL.md"
-        if not entry.is_dir() or not skill_file.is_file():
+    seen: set[str] = set()
+    for skill_file in sorted(skills_dir.rglob("SKILL.md")):
+        if not skill_file.is_file():
             continue
         text = skill_file.read_text(encoding="utf-8", errors="ignore")
         fm = _parse_frontmatter(text)
@@ -49,9 +49,14 @@ def list_skills(skills_dir: Path) -> list[SkillMetadata]:
             report_count = int(raw_count)
         except ValueError:
             report_count = 0
+        name = fm.get("name") or skill_file.parent.name
+        key = name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
         skills.append(
             SkillMetadata(
-                name=fm.get("name") or entry.name,
+                name=name,
                 description=fm.get("description") or "",
                 sources=fm.get("sources") or "",
                 report_count=report_count,
@@ -62,11 +67,17 @@ def list_skills(skills_dir: Path) -> list[SkillMetadata]:
 
 
 def get_skill(skills_dir: Path, name: str, section: str = "") -> str | None:
+    needle = name.lower().strip()
     direct = skills_dir / name / "SKILL.md"
     path = direct if direct.is_file() else None
     if path is None:
+        for skill_file in skills_dir.rglob("SKILL.md"):
+            if skill_file.parent.name.lower() == needle:
+                path = skill_file
+                break
+    if path is None:
         for sk in list_skills(skills_dir):
-            if sk.name.lower() == name.lower():
+            if sk.name.lower() == needle:
                 path = Path(sk.path)
                 break
     if path is None or not path.is_file():

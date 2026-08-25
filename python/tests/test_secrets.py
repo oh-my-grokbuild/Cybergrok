@@ -9,6 +9,14 @@ def test_aws_and_github_patterns():
     assert "GH_PAT_CLASSIC" in names
 
 
+def test_multi_group_captures_secret_not_filler():
+    secret = "A" * 40
+    findings = scan_text(f"aws secret = {secret}\n", "mem")
+    loose = [f for f in findings if f.pattern == "AWS_SECRET_LOOSE"]
+    assert loose
+    assert secret in loose[0].match
+
+
 def test_severity_filter_and_mask():
     findings = scan_text("sk_test_" + ("a" * 24), "mem")
     assert findings

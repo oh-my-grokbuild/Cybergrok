@@ -85,8 +85,10 @@ def scan_line(line: str, line_no: int, source: str) -> list[Finding]:
     for name, severity, category, cre in _COMPILED:
         for m in cre.finditer(line):
             match_text = m.group(0)
-            if m.lastindex and m.group(1):
-                match_text = m.group(1)
+            if m.lastindex:
+                last = m.group(m.lastindex)
+                if last:
+                    match_text = last
             findings.append(Finding(name, severity, category, match_text, source, line_no))
     return findings
 

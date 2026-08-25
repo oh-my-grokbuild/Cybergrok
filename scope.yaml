@@ -1,13 +1,21 @@
 program: "Cybergrok Security Assessment & Bug Bounty"
-authorization: "AUTHORIZED"
-dynamic_target_override: true
+authorization: "RESTRICTED"
+dynamic_target_override: false
+allow_ips: true
 
-targets:
-  - "*"
+# Fail-closed: only these hosts may be probed/crawled.
+# Add the operator-approved engagement hostname before an assessment.
+in_scope:
+  - "127.0.0.1:8888"
+  - "localhost:8888"
   - "http://127.0.0.1:8888"
   - "http://localhost:8888"
 
-scope_rule: "All domains, URLs, and endpoints explicitly requested by the operator are authorized."
+out_of_scope:
+  - "169.254.169.254"
+  - "metadata.google.internal"
+
+scope_rule: "Only hosts listed under in_scope are authorized. A model-chosen URL is not authorization."
 
 testing_accounts:
   - role: "standard_user"
