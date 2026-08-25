@@ -20,12 +20,43 @@ def _safe_cli_slug(raw: str) -> str:
     return slug
 
 
+class _SmartPipeArgs(argparse.Namespace):
+    target: str = ""
+    tool: str = ""
+    limit: int = 40
+
+
+class _SecretScanArgs(argparse.Namespace):
+    paths: list[str]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.paths = []
+
+
+class _SearchArgs(argparse.Namespace):
+    query: list[str]
+    source: str = "all"
+    limit: int = 3
+    max_len: int = 1400
+    json: bool = False
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.query = []
+
+
+class _AggregateArgs(argparse.Namespace):
+    target: str | None = None
+    all: bool = False
+
+
 def main_smart_pipe(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="smart_pipe")
-    parser.add_argument("--target", "-t", default="default_target")
-    parser.add_argument("--tool", "-n", default="tool")
-    parser.add_argument("--limit", "-l", type=int, default=40)
-    args = parser.parse_args(argv)
+    _ = parser.add_argument("--target", "-t", default="default_target")
+    _ = parser.add_argument("--tool", "-n", default="tool")
+    _ = parser.add_argument("--limit", "-l", type=int, default=40)
+    args = parser.parse_args(argv, namespace=_SmartPipeArgs())
     if sys.stdin.isatty():
         print("Usage: <tool_command> | smart_pipe --target <SLUG> --tool <TOOL>", file=sys.stderr)
         return 1
@@ -40,7 +71,7 @@ def main_smart_pipe(argv: list[str] | None = None) -> int:
     dest_dir.mkdir(parents=True, exist_ok=True)
     raw_path = dest_dir / f"{tool}_raw.txt"
     with raw_path.open("w", encoding="utf-8") as raw_out:
-        stream.process_stream(sys.stdin, sys.stdout, raw_out, args.limit)
+        _ = stream.process_stream(sys.stdin, sys.stdout, raw_out, args.limit)
     try:
         rel = raw_path.relative_to(root)
     except ValueError:
@@ -51,8 +82,8 @@ def main_smart_pipe(argv: list[str] | None = None) -> int:
 
 def main_secret_scan(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="secret_scan")
-    parser.add_argument("paths", nargs="*")
-    args = parser.parse_args(argv)
+    _ = parser.add_argument("paths", nargs="*")
+    args = parser.parse_args(argv, namespace=_SecretScanArgs())
     findings: list[secrets.Finding] = []
     if not args.paths:
         if sys.stdin.isatty():
@@ -71,19 +102,19 @@ def main_secret_scan(argv: list[str] | None = None) -> int:
                 findings.extend(secrets.scan_file(p))
     for item in findings:
         payload = item.to_dict()
-        payload["match"] = secrets.mask_secret(payload["match"])
+        payload["match"] = secrets.mask_secret(str(payload["match"]))
         print(json.dumps(payload))
     return 0
 
 
 def main_search_knowledge(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="search_knowledge")
-    parser.add_argument("query", nargs="+")
-    parser.add_argument("--source", "-s", default="all")
-    parser.add_argument("--limit", "-l", "-n", type=int, default=3)
-    parser.add_argument("--max-len", "-m", type=int, default=1400)
-    parser.add_argument("--json", "-j", action="store_true")
-    args = parser.parse_args(argv)
+    _ = parser.add_argument("query", nargs="+")
+    _ = parser.add_argument("--source", "-s", default="all")
+    _ = parser.add_argument("--limit", "-l", "-n", type=int, default=3)
+    _ = parser.add_argument("--max-len", "-m", type=int, default=1400)
+    _ = parser.add_argument("--json", "-j", action="store_true")
+    args = parser.parse_args(argv, namespace=_SearchArgs())
     query = " ".join(args.query)
     root = find_plugin_root()
     results = search.Searcher(root / "knowledge", root).search(
@@ -122,9 +153,9 @@ def main_search_knowledge(argv: list[str] | None = None) -> int:
 
 def main_aggregate_reports(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="aggregate_reports")
-    parser.add_argument("target", nargs="?")
-    parser.add_argument("--all", "-a", action="store_true")
-    args = parser.parse_args(argv)
+    _ = parser.add_argument("target", nargs="?")
+    _ = parser.add_argument("--all", "-a", action="store_true")
+    args = parser.parse_args(argv, namespace=_AggregateArgs())
     root = find_workspace_root()
     reports_dir = root / "reports"
     if args.all:
@@ -144,9 +175,9 @@ def main_aggregate_reports(argv: list[str] | None = None) -> int:
     summary = report.aggregate_target(target_dir)
     print(
         f"✓ [Aggregate Reports] {summary.target} | Confirmed: {summary.total_findings} "
-        f"(Crit: {summary.severity_summary['CRITICAL']}, High: {summary.severity_summary['HIGH']}, "
-        f"Med: {summary.severity_summary['MEDIUM']}, Low: {summary.severity_summary['LOW']}, "
-        f"Info: {summary.severity_summary['INFORMATIONAL']})"
+        + f"(Crit: {summary.severity_summary['CRITICAL']}, High: {summary.severity_summary['HIGH']}, "
+        + f"Med: {summary.severity_summary['MEDIUM']}, Low: {summary.severity_summary['LOW']}, "
+        + f"Info: {summary.severity_summary['INFORMATIONAL']})"
     )
     print(f"  📄 Updated: reports/{summary.target}/SUMMARY.md")
     print(f"  📊 Updated: reports/{summary.target}/metadata.json")

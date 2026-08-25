@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 SEV_CRITICAL = "critical"
 SEV_HIGH = "high"
@@ -128,8 +127,15 @@ class Finding:
     source: str
     line: int
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "pattern": self.pattern,
+            "severity": self.severity,
+            "category": self.category,
+            "match": self.match,
+            "source": self.source,
+            "line": self.line,
+        }
 
 
 def scan_line(line: str, line_no: int, source: str) -> list[Finding]:
@@ -171,7 +177,7 @@ def scan_directory(
         if not p.is_file():
             continue
         try:
-            p.resolve().relative_to(bound)
+            _ = p.resolve().relative_to(bound)
         except ValueError:
             continue
         files.append(p)

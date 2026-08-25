@@ -150,7 +150,7 @@ def process_stream(
         if not cleaned:
             continue
         total_raw += 1
-        raw_out.write(cleaned + "\n")
+        _ = raw_out.write(cleaned + "\n")
         if cleaned in seen:
             continue
         seen.add(cleaned)
@@ -160,13 +160,13 @@ def process_stream(
 
     scored.sort(key=lambda item: item.score, reverse=True)
     display = min(limit, len(scored))
-    stdout.write(
+    _ = stdout.write(
         f"📊 [Smart Filter] {display} high-signal findings prioritized "
-        f"(from {total_raw} total raw lines).\n\n"
+        + f"(from {total_raw} total raw lines).\n\n"
     )
     stdout.writelines(item.text + "\n" for item in scored[:display])
     if len(scored) > display:
-        stdout.write(
+        _ = stdout.write(
             f"\n... (+{len(scored) - display} more filtered entries archived in raw log)\n"
         )
 

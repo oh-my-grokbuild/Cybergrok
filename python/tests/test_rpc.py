@@ -10,8 +10,11 @@ from cybergrok.rpc import dispatch
 def test_list_skills_rpc():
     root = find_plugin_root()
     result = dispatch("list_skills", {"filter": "idor", "limit": 5, "plugin_root": str(root)})
-    assert result["total"] > 0
-    assert any("idor" in s["name"] for s in result["skills"])
+    assert int(str(result["total"])) > 0
+    from cybergrok import _coerce
+
+    names = [str(item.get("name", "")) for item in _coerce.as_maps(result.get("skills"))]
+    assert any("idor" in name for name in names)
 
 
 def test_nested_skill_lookup():
@@ -39,10 +42,10 @@ def test_unknown_op():
 
 def test_http_probe_absolute_slug_cannot_swap_scope(tmp_path: Path):
     root = find_plugin_root()
-    (tmp_path / "scope.yaml").write_text("in_scope:\n  - lab.example\n", encoding="utf-8")
+    _ = (tmp_path / "scope.yaml").write_text("in_scope:\n  - lab.example\n", encoding="utf-8")
     evil = tmp_path.parent / "rpc_evil_scope"
     evil.mkdir(exist_ok=True)
-    (evil / "scope.yaml").write_text(
+    _ = (evil / "scope.yaml").write_text(
         "in_scope:\n  - evil.example\nallow_ips: true\n", encoding="utf-8"
     )
     result = dispatch(
@@ -57,31 +60,31 @@ def test_http_probe_absolute_slug_cannot_swap_scope(tmp_path: Path):
         },
     )
     assert "error" in result
-    assert "Scope Guard" in result["error"]
+    assert "Scope Guard" in str(result["error"])
 
 
 def test_scan_secrets_rejects_workspace_root(tmp_path: Path):
     root = find_plugin_root()
-    (tmp_path / ".env").write_text("ghp_" + ("a" * 36) + "\n", encoding="utf-8")
+    _ = (tmp_path / ".env").write_text("ghp_" + ("a" * 36) + "\n", encoding="utf-8")
     result = dispatch(
         "scan_secrets",
         {"path": ".env", "workspace": str(tmp_path), "plugin_root": str(root)},
     )
     assert "error" in result
-    assert "recon" in result["error"]
+    assert "recon" in str(result["error"])
 
 
 def test_scan_secrets_allows_recon_tree(tmp_path: Path):
     root = find_plugin_root()
     recon = tmp_path / "recon" / "lab"
     recon.mkdir(parents=True)
-    (recon / "js.txt").write_text("ghp_" + ("a" * 36) + "\n", encoding="utf-8")
+    _ = (recon / "js.txt").write_text("ghp_" + ("a" * 36) + "\n", encoding="utf-8")
     result = dispatch(
         "scan_secrets",
         {"path": "recon/lab/js.txt", "workspace": str(tmp_path), "plugin_root": str(root)},
     )
     assert "error" not in result
-    assert result["reported"] >= 1
+    assert int(str(result["reported"])) >= 1
 
 
 def test_http_probe_blocks_out_of_scope_redirect(tmp_path: Path):
@@ -90,13 +93,13 @@ def test_http_probe_blocks_out_of_scope_redirect(tmp_path: Path):
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
             if self.path == "/go":
-                self.send_response(302)
-                self.send_header("Location", f"http://127.0.0.1:{ports['secret']}/secret")
+                _ = self.send_response(302)
+                _ = self.send_header("Location", f"http://127.0.0.1:{ports['secret']}/secret")
                 self.end_headers()
                 return
-            self.send_response(200)
+            _ = self.send_response(200)
             self.end_headers()
-            self.wfile.write(b"SECRET")
+            _ = self.wfile.write(b"SECRET")
 
         @override
         def log_message(self, format: str, *args: object) -> None:
@@ -114,7 +117,7 @@ def test_http_probe_blocks_out_of_scope_redirect(tmp_path: Path):
     try:
         seed_port = seed.server_address[1]
         secret_port = secret.server_address[1]
-        (tmp_path / "scope.yaml").write_text(
+        _ = (tmp_path / "scope.yaml").write_text(
             f"in_scope:\n  - 127.0.0.1:{seed_port}\n",
             encoding="utf-8",
         )
@@ -129,7 +132,7 @@ def test_http_probe_blocks_out_of_scope_redirect(tmp_path: Path):
                 "timeout_seconds": 3,
             },
         )
-        err = result.get("error") or ""
+        err = str(result.get("error") or "")
         assert err
         assert "SECRET" not in str(result)
         assert "does not match" in err or "Scope Guard" in err or "blocked" in err.lower()
@@ -141,10 +144,10 @@ def test_http_probe_blocks_out_of_scope_redirect(tmp_path: Path):
 
 def test_http_probe_ignores_planted_per_target_scope(tmp_path: Path):
     root = find_plugin_root()
-    (tmp_path / "scope.yaml").write_text("in_scope:\n  - lab.example\n", encoding="utf-8")
+    _ = (tmp_path / "scope.yaml").write_text("in_scope:\n  - lab.example\n", encoding="utf-8")
     planted = tmp_path / "reports" / "lab"
     planted.mkdir(parents=True)
-    (planted / "scope.yaml").write_text("in_scope:\n  - evil.example\n", encoding="utf-8")
+    _ = (planted / "scope.yaml").write_text("in_scope:\n  - evil.example\n", encoding="utf-8")
     result = dispatch(
         "http_probe",
         {
@@ -157,4 +160,5 @@ def test_http_probe_ignores_planted_per_target_scope(tmp_path: Path):
         },
     )
     assert "error" in result
-    assert "Scope Guard" in result["error"] or "does not match" in result["error"]
+    err = str(result["error"])
+    assert "Scope Guard" in err or "does not match" in err

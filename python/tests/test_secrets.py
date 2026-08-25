@@ -28,11 +28,11 @@ def test_dsa_private_key_keeps_full_header():
 
 def test_directory_scan_skips_outside_symlinks(tmp_path: Path):
     outside = tmp_path / "outside.env"
-    outside.write_text("ghp_" + ("a" * 36) + "\n", encoding="utf-8")
+    _ = outside.write_text("ghp_" + ("a" * 36) + "\n", encoding="utf-8")
     recon = tmp_path / "recon" / "lab"
     recon.mkdir(parents=True)
     (recon / "leak.env").symlink_to(outside)
-    (recon / "ok.txt").write_text("sk_test_" + ("a" * 24) + "\n", encoding="utf-8")
+    _ = (recon / "ok.txt").write_text("sk_test_" + ("a" * 24) + "\n", encoding="utf-8")
     findings = scan_directory(recon, confine_to=recon)
     sources = {Path(f.source).name for f in findings}
     assert "ok.txt" in sources

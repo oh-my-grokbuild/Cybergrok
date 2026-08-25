@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 
 @dataclass
@@ -15,8 +14,14 @@ class SkillMetadata:
     report_count: int = 0
     path: str = ""
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "name": self.name,
+            "description": self.description,
+            "sources": self.sources,
+            "report_count": self.report_count,
+            "path": self.path,
+        }
 
 
 def _parse_frontmatter(text: str) -> dict[str, str]:

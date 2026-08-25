@@ -3,11 +3,11 @@ import sys
 from pathlib import Path
 
 if sys.platform == "win32":
-    try:
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        pass
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            _ = reconfigure(encoding="utf-8", errors="replace")
+
 
 def validate_skills(skills_dir: Path) -> int:
     if not skills_dir.exists():
@@ -16,8 +16,8 @@ def validate_skills(skills_dir: Path) -> int:
 
     total = 0
     valid = 0
-    missing_skill_md = []
-    missing_desc = []
+    missing_skill_md: list[str] = []
+    missing_desc: list[str] = []
 
     for entry in sorted(skills_dir.iterdir()):
         if entry.is_dir() and not entry.name.startswith("."):
@@ -55,6 +55,7 @@ def validate_skills(skills_dir: Path) -> int:
 
     print("=" * 60)
     return 0
+
 
 if __name__ == "__main__":
     base_dir = Path(__file__).resolve().parent.parent

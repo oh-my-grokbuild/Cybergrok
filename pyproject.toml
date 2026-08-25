@@ -24,6 +24,7 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.16.4",
     "ty>=0.0.74",
+    "basedpyright>=1.29,<2",
 ]
 
 [project.scripts]
@@ -34,6 +35,9 @@ aggregate_reports = "cybergrok.cli:main_aggregate_reports"
 
 [tool.setuptools.packages.find]
 where = ["python"]
+
+[tool.setuptools.package-data]
+cybergrok = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["python/tests"]
@@ -158,10 +162,10 @@ max-statements = 70
 "python/cybergrok/crawl.py" = ["S310"]
 "tools/**/*.py" = [
     "T201", "INP001", "S603", "S607", "S310", "S102", "S103", "S110", "S605",
-    "BLE001", "C901", "PLR", "PLW", "PTH", "PLC0415", "SIM105", "ARG001", "UP036", "W293",
+    "BLE001", "C901", "PLR", "PLW", "PTH", "PLC0415", "E402", "SIM105", "ARG001", "UP036", "W293",
 ]
 "scripts/**/*.py" = [
-    "T201", "INP001", "S603", "S607", "BLE001", "PTH123", "ARG001", "C901", "PLR",
+    "T201", "INP001", "S603", "S607", "BLE001", "PTH123", "ARG001", "C901", "PLR", "E402",
 ]
 "examples/**/*.py" = ["T201", "INP001", "S104", "S310", "A002", "ARG001"]
 "**/__main__.py" = ["T201"]
@@ -208,3 +212,25 @@ include = ["python/tests/**", "tools/**", "scripts/**", "examples/**"]
 [tool.ty.overrides.rules]
 possibly-unresolved-reference = "warn"
 unused-ignore-comment = "warn"
+
+# --- basedpyright (IDE + CI, recommended mode) ---
+# Same first-party trees as ruff. Vendored knowledge/ stays out.
+
+[tool.basedpyright]
+pythonVersion = "3.14"
+pythonPlatform = "All"
+extraPaths = ["python"]
+include = ["python", "tools", "scripts", "examples"]
+exclude = [
+    "knowledge",
+    "venv",
+    ".venv",
+    "mcp",
+    ".grok",
+    "reports",
+    "recon",
+    "output",
+    "logs",
+    "targets",
+    "**/__pycache__",
+]

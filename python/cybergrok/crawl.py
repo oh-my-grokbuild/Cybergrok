@@ -6,13 +6,14 @@ import re
 import ssl
 import time
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TypedDict
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
-from urllib.request import HTTPSHandler, Request, build_opener
+from urllib.request import HTTPSHandler, OpenerDirector, Request, build_opener
 
+from . import _coerce
 from .netguard import UnsafeURL, assert_safe_url, prepare_safe_request
 from .probe import GuardedRedirectHandler
 from .stream import score_line
@@ -37,8 +38,15 @@ class CrawlResult:
     engine_used: str = "native_python"
     duration_ms: int = 0
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "target_url": self.target_url,
+            "total_endpoints_found": self.total_endpoints_found,
+            "top_endpoints": list(self.top_endpoints),
+            "saved_file_path": self.saved_file_path,
+            "engine_used": self.engine_used,
+            "duration_ms": self.duration_ms,
+        }
 
 
 def _resolve(base: str, ref: str) -> str:
@@ -47,15 +55,16 @@ def _resolve(base: str, ref: str) -> str:
     return urljoin(base, ref)
 
 
-def _fetch(opener, url: str, user_agent: str, timeout: int, allow_private: bool = False) -> str:
+def _fetch(
+    opener: OpenerDirector, url: str, user_agent: str, timeout: int, allow_private: bool = False
+) -> str:
     fetch, host_hdr = prepare_safe_request(url, allow_private=allow_private)
     req = Request(fetch, headers={"User-Agent": user_agent, "Host": host_hdr})
     try:
-        with opener.open(req, timeout=min(5, timeout)) as resp:
-            return str(resp.read(512 * 1024).decode("utf-8", errors="ignore"))
+        return _coerce.open_limited(opener, req, min(5, timeout), 512 * 1024)
     except HTTPError as exc:
         if exc.fp:
-            return str(exc.read(512 * 1024).decode("utf-8", errors="ignore"))
+            return _coerce.read_limited_text(exc, 512 * 1024)
         return ""
     except URLError, TimeoutError, OSError:
         return ""
@@ -76,10 +85,7 @@ def _same_origin(left: str, right: str) -> bool:
 
 
 def _check(url: str, allow_private: bool, guard: Callable[[str], str] | None) -> str:
-    if guard:
-        guard(url)
-    else:
-        assert_safe_url(url, allow_private=allow_private)
+    _ = guard(url) if guard else assert_safe_url(url, allow_private=allow_private)
     return url
 
 
@@ -171,7 +177,7 @@ def crawl_target(
     if output_dir:
         output_dir.mkdir(parents=True, exist_ok=True)
         dest = output_dir / f"{engine}.txt"
-        dest.write_text("".join(item["text"] + "\n" for item in scored), encoding="utf-8")
+        _ = dest.write_text("".join(item["text"] + "\n" for item in scored), encoding="utf-8")
         saved = str(dest)
     top = scored[: max(1, max_endpoints)]
     return CrawlResult(

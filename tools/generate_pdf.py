@@ -15,6 +15,9 @@ from pathlib import Path
 
 import markdown
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "python"))
+from cybergrok import _coerce
+
 
 def _reports_dir() -> Path:
     raw = os.environ.get("GROK_WORKSPACE_ROOT") or os.environ.get("CYBERGROK_WORKSPACE")
@@ -391,42 +394,56 @@ REPORT_HTML_TEMPLATE = """<!DOCTYPE html>
 </html>
 """
 
+
 def clean_markdown_for_html(content: str) -> str:
     """Pre-process markdown content for clean HTML conversion."""
     # Convert markdown tables, codeblocks and lists
     md = markdown.Markdown(extensions=["extra", "tables", "fenced_code", "nl2br"])
     return md.convert(content)
 
-def generate_report_for_target(target_dir: Path, output_pdf: bool = True) -> tuple:
+
+def generate_report_for_target(target_dir: Path, output_pdf: bool = True) -> tuple[Path, Path]:
     """Render HTML and export PDF via Playwright for a specific target directory."""
     target_name = target_dir.name
     metadata_file = target_dir / "metadata.json"
     findings_dir = target_dir / "findings"
 
-    metadata = {}
+    metadata: dict[str, object] = {}
     if metadata_file.exists():
         try:
-            metadata = json.loads(metadata_file.read_text(encoding="utf-8"))
-        except Exception:
-            pass
+            metadata = _coerce.json_object(metadata_file.read_text(encoding="utf-8"))
+        except OSError, json.JSONDecodeError, TypeError:
+            metadata = {}
 
-    stats = metadata.get("severity_summary", {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFORMATIONAL": 0})
-    findings = metadata.get("findings", [])
-    pocs = metadata.get("pocs", [])
-    scan_time = metadata.get("scan_time", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    total_findings = metadata.get("total_findings", len(findings))
+    stats_map = _coerce.as_str_map(metadata.get("severity_summary"))
+    stats = (
+        {key: int(str(value)) for key, value in stats_map.items()}
+        if stats_map
+        else {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFORMATIONAL": 0}
+    )
+    findings = _coerce.as_maps(metadata.get("findings"))
+    pocs = _coerce.as_str_list(metadata.get("pocs"))
+    scan_time = str(metadata.get("scan_time") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    total_raw = metadata.get("total_findings")
+    total_findings = int(str(total_raw)) if total_raw is not None else len(findings)
 
-    detailed_findings = []
+    detailed_findings: list[dict[str, str]] = []
     if findings_dir.exists():
         for f_path in sorted(findings_dir.glob("*.md")):
             if f_path.name.lower() in ("summary.md", "readme.md"):
                 continue
             raw_text = f_path.read_text(encoding="utf-8", errors="replace")
             # Extract title & severity
-            title_match = re.search(r"^#\s+(?:Vulnerability Report:\s*)?(.+)$", raw_text, re.MULTILINE)
+            title_match = re.search(
+                r"^#\s+(?:Vulnerability Report:\s*)?(.+)$", raw_text, re.MULTILINE
+            )
             title = title_match.group(1).strip() if title_match else f_path.stem.replace("_", " ")
 
-            sev_match = re.search(r"(?:Severity|Severity Rating)\s*[:|]\s*\*?`?([A-Za-z]+)`?\*?", raw_text, re.IGNORECASE)
+            sev_match = re.search(
+                r"(?:Severity|Severity Rating)\s*[:|]\s*\*?`?([A-Za-z]+)`?\*?",
+                raw_text,
+                re.IGNORECASE,
+            )
             severity = sev_match.group(1).upper() if sev_match else "INFORMATIONAL"
             if severity == "INFO":
                 severity = "INFORMATIONAL"
@@ -435,37 +452,37 @@ def generate_report_for_target(target_dir: Path, output_pdf: bool = True) -> tup
             cleaned_text = re.sub(r"^#\s+.*$", "", raw_text, count=1, flags=re.MULTILINE).strip()
             html_body = clean_markdown_for_html(cleaned_text)
 
-            detailed_findings.append({
-                "title": title,
-                "severity": severity,
-                "html_content": html_body
-            })
+            detailed_findings.append(
+                {"title": title, "severity": severity, "html_content": html_body}
+            )
 
     final_report_file = target_dir / "FINAL_REPORT.md"
     if not detailed_findings and final_report_file.exists():
         raw_text = final_report_file.read_text(encoding="utf-8", errors="replace")
         html_body = clean_markdown_for_html(raw_text)
-        detailed_findings.append({
-            "title": "Full Assessment Narrative & Findings",
-            "severity": "LOW" if stats.get("LOW", 0) > 0 else "INFORMATIONAL",
-            "html_content": html_body
-        })
+        detailed_findings.append(
+            {
+                "title": "Full Assessment Narrative & Findings",
+                "severity": "LOW" if stats.get("LOW", 0) > 0 else "INFORMATIONAL",
+                "html_content": html_body,
+            }
+        )
 
-    # Render template using Jinja2
-    from jinja2 import Template
-    template = Template(REPORT_HTML_TEMPLATE)
-    html_rendered = template.render(
-        target=target_name,
-        scan_time=scan_time,
-        total_findings=total_findings,
-        stats=stats,
-        findings=findings,
-        detailed_findings=detailed_findings,
-        pocs=pocs
+    html_rendered = _coerce.render_template(
+        REPORT_HTML_TEMPLATE,
+        {
+            "target": target_name,
+            "scan_time": scan_time,
+            "total_findings": total_findings,
+            "stats": stats,
+            "findings": findings,
+            "detailed_findings": detailed_findings,
+            "pocs": pocs,
+        },
     )
 
     html_file = target_dir / "report.html"
-    html_file.write_text(html_rendered, encoding="utf-8")
+    _ = html_file.write_text(html_rendered, encoding="utf-8")
     try:
         os.chmod(html_file, 0o666)
     except Exception:
@@ -476,21 +493,22 @@ def generate_report_for_target(target_dir: Path, output_pdf: bool = True) -> tup
     if output_pdf:
         try:
             from playwright.sync_api import sync_playwright
+
             with sync_playwright() as p:
                 browser = p.chromium.launch(
                     headless=True,
-                    args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+                    args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
                 )
                 page = browser.new_page()
                 try:
                     page.set_content(html_rendered, wait_until="networkidle", timeout=15000)
                 except Exception:
                     page.set_content(html_rendered, wait_until="load", timeout=10000)
-                page.pdf(
+                _ = page.pdf(
                     path=str(pdf_file),
                     format="A4",
                     print_background=True,
-                    margin={"top": "15mm", "bottom": "15mm", "left": "15mm", "right": "15mm"}
+                    margin={"top": "15mm", "bottom": "15mm", "left": "15mm", "right": "15mm"},
                 )
                 browser.close()
             try:
@@ -502,28 +520,39 @@ def generate_report_for_target(target_dir: Path, output_pdf: bool = True) -> tup
 
     return html_file, pdf_file
 
-def main():
+
+class _PdfArgs(argparse.Namespace):
+    target: str | None = None
+    all: bool = False
+    no_pdf: bool = False
+    root: str | None = None
+
+
+def main() -> None:
     parser = argparse.ArgumentParser(description="Cybergrok PDF & HTML Report Generator")
-    parser.add_argument("target", nargs="?", help="Target slug name (e.g. target_example_com)")
-    parser.add_argument("--all", action="store_true", help="Generate reports for all targets")
-    parser.add_argument("--no-pdf", action="store_true", help="Generate HTML only without rendering PDF")
-    parser.add_argument("--root", help="Workspace root that contains reports/ (default: GROK_WORKSPACE_ROOT or plugin repo)")
-    args = parser.parse_args()
-    global REPORTS_DIR
-    if args.root:
-        REPORTS_DIR = Path(args.root).expanduser().resolve() / "reports"
+    _ = parser.add_argument("target", nargs="?", help="Target slug name (e.g. target_example_com)")
+    _ = parser.add_argument("--all", action="store_true", help="Generate reports for all targets")
+    _ = parser.add_argument(
+        "--no-pdf", action="store_true", help="Generate HTML only without rendering PDF"
+    )
+    _ = parser.add_argument(
+        "--root",
+        help="Workspace root that contains reports/ (default: GROK_WORKSPACE_ROOT or plugin repo)",
+    )
+    args = parser.parse_args(namespace=_PdfArgs())
+    reports_dir = Path(args.root).expanduser().resolve() / "reports" if args.root else REPORTS_DIR
 
     def _confine_report(path: Path) -> Path | None:
         try:
             resolved = path.resolve()
-            resolved.relative_to(REPORTS_DIR.resolve())
+            _ = resolved.relative_to(reports_dir.resolve())
         except ValueError:
             return None
         return resolved if resolved.is_dir() else None
 
-    targets_to_process = []
+    targets_to_process: list[Path] = []
     if args.all:
-        for p in REPORTS_DIR.iterdir():
+        for p in reports_dir.iterdir():
             confined = _confine_report(p)
             if confined is not None and not p.name.startswith("."):
                 targets_to_process.append(confined)
@@ -532,14 +561,14 @@ def main():
         if slug in {".", ".."} or "/" in slug or "\\" in slug:
             print("❌ Invalid target slug")
             sys.exit(1)
-        target_dir = _confine_report(REPORTS_DIR / slug)
+        target_dir = _confine_report(reports_dir / slug)
         if target_dir is not None:
             targets_to_process.append(target_dir)
         else:
             print(f"❌ Target directory not found or outside reports/: {slug}")
             sys.exit(1)
     else:
-        for p in REPORTS_DIR.iterdir():
+        for p in reports_dir.iterdir():
             confined = _confine_report(p)
             if confined is not None and not p.name.startswith("."):
                 targets_to_process.append(confined)
@@ -553,6 +582,7 @@ def main():
         print(f"   📄 HTML Dashboard: {html_f}")
         if not args.no_pdf and pdf_f.exists():
             print(f"   📑 Executive PDF : {pdf_f} ({pdf_f.stat().st_size / 1024:.1f} KB)")
+
 
 if __name__ == "__main__":
     main()

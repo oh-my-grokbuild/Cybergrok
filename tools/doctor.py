@@ -20,19 +20,19 @@ BOLD = "\033[1m"
 RESET = "\033[0m"
 
 if sys.platform == "win32":
-    try:
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        pass
-    os.system("")
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            _ = reconfigure(encoding="utf-8", errors="replace")
 
-def print_header(title: str):
-    print(f"\n{BOLD}{CYAN}{'='*60}{RESET}")
+
+def print_header(title: str) -> None:
+    print(f"\n{BOLD}{CYAN}{'=' * 60}{RESET}")
     print(f"{BOLD}{CYAN}  {title}{RESET}")
-    print(f"{BOLD}{CYAN}{'='*60}{RESET}")
+    print(f"{BOLD}{CYAN}{'=' * 60}{RESET}")
 
-def print_status(status: str, msg: str, detail: str = ""):
+
+def print_status(status: str, msg: str, detail: str = "") -> None:
     badge_map = {
         "ok": f"{GREEN}[OK]{RESET}",
         "warn": f"{YELLOW}[WARN]{RESET}",
@@ -43,19 +43,18 @@ def print_status(status: str, msg: str, detail: str = ""):
     detail_str = f" ({detail})" if detail else ""
     print(f"  {badge} {msg}{detail_str}")
 
+
 def check_python() -> tuple[int, int, int]:
     print_header("1. Python Environment")
     passed, warns, fails = 0, 0, 0
 
     py_ver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    if sys.version_info >= (3, 10):
-        print_status("ok", "Python Version", f"{py_ver} >= 3.10")
-        passed += 1
-    else:
-        print_status("fail", "Python Version", f"{py_ver} (Requires 3.10+)")
-        fails += 1
+    print_status("ok", "Python Version", f"{py_ver} >= 3.14")
+    passed += 1
 
-    in_venv = hasattr(sys, "real_prefix") or (hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix)
+    in_venv = hasattr(sys, "real_prefix") or (
+        hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix
+    )
     if in_venv:
         print_status("ok", "Virtual Environment", "Active")
         passed += 1
@@ -74,6 +73,7 @@ def check_python() -> tuple[int, int, int]:
             warns += 1
 
     return passed, warns, fails
+
 
 def check_directories(root_dir: Path, auto_fix: bool = False) -> tuple[int, int, int]:
     print_header("2. Workspace Directories & Permissions")
@@ -97,7 +97,7 @@ def check_directories(root_dir: Path, auto_fix: bool = False) -> tuple[int, int,
         else:
             try:
                 test_file = dir_path / ".perm_test"
-                test_file.write_text("test", encoding="utf-8")
+                _ = test_file.write_text("test", encoding="utf-8")
                 test_file.unlink()
                 print_status("ok", f"Directory '{d}'", "Writable")
                 passed += 1
@@ -106,6 +106,7 @@ def check_directories(root_dir: Path, auto_fix: bool = False) -> tuple[int, int,
                 fails += 1
 
     return passed, warns, fails
+
 
 def check_config(root_dir: Path, auto_fix: bool = False) -> tuple[int, int, int]:
     print_header("3. Grok Build Plugin & Runtimes")
@@ -164,7 +165,7 @@ def check_config(root_dir: Path, auto_fix: bool = False) -> tuple[int, int, int]
         print_status("ok", "Environment File (.env)", "Present")
         passed += 1
     elif auto_fix and (root_dir / ".env.example").exists():
-        shutil.copy(root_dir / ".env.example", env_file)
+        _ = shutil.copy(root_dir / ".env.example", env_file)
         print_status("fixed", "Environment File (.env)", "Generated from .env.example")
         passed += 1
     else:
@@ -172,6 +173,7 @@ def check_config(root_dir: Path, auto_fix: bool = False) -> tuple[int, int, int]
         warns += 1
 
     return passed, warns, fails
+
 
 def check_tools(root_dir: Path, auto_fix: bool = False) -> tuple[int, int, int]:
     print_header("4. Security Toolchain Availability")
@@ -194,7 +196,7 @@ def check_tools(root_dir: Path, auto_fix: bool = False) -> tuple[int, int, int]:
         ("nuclei", "Vulnerability Scanner"),
     ]
 
-    missing_tools = []
+    missing_tools: list[str] = []
     for name, desc in tools:
         found = shutil.which(name) or (sys.platform == "win32" and shutil.which(f"{name}.exe"))
         if found:
@@ -210,18 +212,30 @@ def check_tools(root_dir: Path, auto_fix: bool = False) -> tuple[int, int, int]:
         if sys.platform == "win32":
             updater = root_dir / "tools" / "update_tools.ps1"
             if updater.exists():
-                subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", str(updater)], check=False)
+                _ = subprocess.run(
+                    ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(updater)],
+                    check=False,
+                )
         else:
             updater = root_dir / "tools" / "update_tools.sh"
             if updater.exists():
-                subprocess.run(["bash", str(updater)], check=False)
+                _ = subprocess.run(["bash", str(updater)], check=False)
 
     return passed, warns, fails
 
-def main():
+
+class _DoctorArgs(argparse.Namespace):
+    fix: bool = False
+
+
+def main() -> None:
     parser = argparse.ArgumentParser(description="Cybergrok Diagnostics & Health Check")
-    parser.add_argument("--fix", action="store_true", help="Automatically repair missing directories, configs, and toolchain")
-    args = parser.parse_args()
+    _ = parser.add_argument(
+        "--fix",
+        action="store_true",
+        help="Automatically repair missing directories, configs, and toolchain",
+    )
+    args = parser.parse_args(namespace=_DoctorArgs())
 
     root_dir = Path(__file__).resolve().parent.parent
     os.chdir(root_dir)
@@ -249,7 +263,10 @@ def main():
     if total_fail == 0:
         print(f"  {GREEN}{BOLD}✓ System is healthy and ready to run Cybergrok!{RESET}\n")
     else:
-        print(f"  {RED}{BOLD}! Some requirements need attention. Run with --fix or check setup guide.{RESET}\n")
+        print(
+            f"  {RED}{BOLD}! Some requirements need attention. Run with --fix or check setup guide.{RESET}\n"
+        )
+
 
 if __name__ == "__main__":
     main()

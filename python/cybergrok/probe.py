@@ -9,14 +9,15 @@ import ssl
 import subprocess
 import time
 from collections.abc import Callable
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from http.client import HTTPMessage
 from pathlib import Path
-from typing import Any, override
+from typing import IO, NotRequired, TypedDict, override
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
 
+from . import _coerce
 from .netguard import UnsafeURL, assert_safe_url, prepare_safe_request
 
 TITLE_RE = re.compile(r"(?i)<title[^>]*>([^<]+)</title>")
@@ -31,7 +32,14 @@ def _tls_context(insecure: bool) -> ssl.SSLContext:
     return ctx
 
 
-SIGNATURES: list[dict[str, Any]] = [
+class _Sig(TypedDict):
+    name: str
+    headers: NotRequired[dict[str, str]]
+    cookies: NotRequired[list[str]]
+    body: NotRequired[list[str]]
+
+
+SIGNATURES: list[_Sig] = [
     {
         "name": "Next.js",
         "headers": {"x-powered-by": "next.js"},
@@ -94,19 +102,36 @@ class ProbeResult:
     response_time_ms: int = 0
     redirect_url: str = ""
     technologies: list[str] = field(default_factory=list)
-    tls_info: dict[str, Any] | None = None
+    tls_info: dict[str, str] | None = None
     headers: dict[str, str] = field(default_factory=dict)
     engine_used: str = "native_python"
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-
-class _BlockedRedirect(HTTPError):
-    pass
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "url": self.url,
+            "scheme": self.scheme,
+            "host": self.host,
+            "port": self.port,
+            "status_code": self.status_code,
+            "status_text": self.status_text,
+            "title": self.title,
+            "web_server": self.web_server,
+            "content_type": self.content_type,
+            "content_length": self.content_length,
+            "response_time_ms": self.response_time_ms,
+            "redirect_url": self.redirect_url,
+            "technologies": list(self.technologies),
+            "tls_info": self.tls_info,
+            "headers": dict(self.headers),
+            "engine_used": self.engine_used,
+        }
 
 
 class GuardedRedirectHandler(HTTPRedirectHandler):
+    allow_private: bool
+    follow: bool
+    guard: Callable[[str], str] | None
+
     def __init__(
         self,
         allow_private: bool,
@@ -119,13 +144,19 @@ class GuardedRedirectHandler(HTTPRedirectHandler):
 
     @override
     def redirect_request(
-        self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str
-    ) -> Any:
+        self,
+        req: Request,
+        fp: IO[bytes],
+        code: int,
+        msg: str,
+        headers: HTTPMessage,
+        newurl: str,
+    ) -> Request | None:
         if not self.follow:
             raise HTTPError(req.full_url, code, msg, headers, fp)
         try:
             if self.guard:
-                self.guard(newurl)
+                _ = self.guard(newurl)
             fetch, host_hdr = prepare_safe_request(newurl, allow_private=self.allow_private)
         except (UnsafeURL, ValueError) as exc:
             raise HTTPError(newurl, code, f"blocked redirect: {exc}", headers, fp) from exc
@@ -168,12 +199,18 @@ def detect_technologies(headers: dict[str, str], cookies: list[str], body: str) 
     return found
 
 
-def _cookie_names(headers: HTTPMessage) -> list[str]:
-    raw = headers.get_all("Set-Cookie") if hasattr(headers, "get_all") else None
-    if not raw:
-        single = headers.get("Set-Cookie")
-        raw = [single] if single else []
-    return [item.split(";", 1)[0].split("=", 1)[0].strip() for item in raw]
+def _json_object(raw: str) -> dict[str, object] | None:
+    try:
+        return _coerce.json_object(raw)
+    except json.JSONDecodeError, TypeError:
+        return None
+
+
+def _json_str(data: dict[str, object], key: str, default: str = "") -> str:
+    value = data.get(key, default)
+    if value is None:
+        return default
+    return str(value)
 
 
 def find_httpx(tools_dir: Path | None = None) -> str | None:
@@ -228,29 +265,27 @@ def probe_httpx(
         line = raw_line.strip()
         if not line.startswith("{"):
             continue
-        try:
-            data = json.loads(line)
-        except json.JSONDecodeError:
+        data = _json_object(line)
+        if data is None or not data.get("url"):
             continue
-        if not data.get("url"):
-            continue
-        tls = data.get("tls") or {}
+        tls = _coerce.as_str_map(data.get("tls"))
+        technologies = _coerce.as_str_list(data.get("tech"))
         return ProbeResult(
-            url=data.get("url", url),
-            scheme=data.get("scheme", ""),
-            host=data.get("host", ""),
+            url=_json_str(data, "url", url),
+            scheme=_json_str(data, "scheme"),
+            host=_json_str(data, "host"),
             port=str(data.get("port") or ""),
-            status_code=int(data.get("status_code") or 0),
+            status_code=int(str(data.get("status_code") or 0)),
             status_text="",
-            title=data.get("title", ""),
-            web_server=data.get("webserver", ""),
-            content_type=data.get("content_type", ""),
+            title=_json_str(data, "title"),
+            web_server=_json_str(data, "webserver"),
+            content_type=_json_str(data, "content_type"),
             response_time_ms=elapsed,
-            technologies=list(data.get("tech") or []),
+            technologies=technologies,
             tls_info={
-                "version": tls.get("version", ""),
-                "subject": tls.get("subject_dn", ""),
-                "issuer": tls.get("issuer_dn", ""),
+                "version": str(tls.get("version", "")),
+                "subject": str(tls.get("subject_dn", "")),
+                "issuer": str(tls.get("issuer_dn", "")),
             }
             if tls
             else None,
@@ -269,7 +304,7 @@ def probe_native(
     guard: Callable[[str], str] | None = None,
 ) -> ProbeResult:
     if guard:
-        guard(url)
+        _ = guard(url)
     fetch, host_hdr = prepare_safe_request(url, allow_private=allow_private)
     raw = url
     parsed = urlparse(raw)
@@ -286,13 +321,9 @@ def probe_native(
     final_url = raw
     tls_info = None
     try:
-        with opener.open(req, timeout=timeout) as resp:
-            body = resp.read(1024 * 1024).decode("utf-8", errors="ignore")
-            headers = dict(resp.headers.items())
-            status = getattr(resp, "status", 200)
-            final_url = resp.geturl()
-            sock = getattr(getattr(resp, "fp", None), "raw", None)
-            sock = getattr(sock, "_sock", None) or getattr(resp, "fp", None)
+        body, headers, status, final_url = _coerce.open_probe(
+            opener, req, timeout, 1024 * 1024, raw
+        )
     except HTTPError as exc:
         body = exc.read(1024 * 1024).decode("utf-8", errors="ignore") if exc.fp else ""
         headers = dict(exc.headers.items()) if exc.headers else {}
@@ -346,10 +377,7 @@ def probe_target(
     insecure_tls: bool = False,
     guard: Callable[[str], str] | None = None,
 ) -> ProbeResult:
-    if guard:
-        guard(url)
-    else:
-        assert_safe_url(url, allow_private=allow_private)
+    _ = guard(url) if guard else assert_safe_url(url, allow_private=allow_private)
     if prefer_httpx and not follow_redirects:
         result = probe_httpx(
             url, timeout, tools_dir, follow_redirects=False, allow_private=allow_private
@@ -357,9 +385,9 @@ def probe_target(
         if result:
             if result.url:
                 if guard:
-                    guard(result.url)
+                    _ = guard(result.url)
                 else:
-                    assert_safe_url(result.url, allow_private=allow_private)
+                    _ = assert_safe_url(result.url, allow_private=allow_private)
             return result
     return probe_native(
         url,

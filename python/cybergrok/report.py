@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 from urllib.parse import urlparse
 
 FRONTMATTER_RE = re.compile(r"(?s)^---\s*\n(.*?)\n---")
@@ -79,8 +78,17 @@ class FindingMeta:
     endpoint: str
     last_modified: str
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "file_name": self.file_name,
+            "relative_path": self.relative_path,
+            "title": self.title,
+            "severity": self.severity,
+            "cvss": self.cvss,
+            "cwe": self.cwe,
+            "endpoint": self.endpoint,
+            "last_modified": self.last_modified,
+        }
 
 
 @dataclass
@@ -94,7 +102,7 @@ class SummaryData:
     evidence_files: list[str] = field(default_factory=list)
     recon_notes: str | None = None
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "target": self.target,
             "scan_time": self.scan_time,
@@ -218,7 +226,7 @@ def generate_summary_md(target_dir: Path, data: SummaryData, custom: str) -> Non
     if custom:
         lines += ["", "---", "", custom]
     lines.append("")
-    (target_dir / "SUMMARY.md").write_text("\n".join(lines), encoding="utf-8")
+    _ = (target_dir / "SUMMARY.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 def aggregate_target(target_dir: Path) -> SummaryData:
@@ -260,7 +268,7 @@ def aggregate_target(target_dir: Path) -> SummaryData:
         evidence_files=evidence,
         recon_notes=recon,
     )
-    (target_dir / "metadata.json").write_text(
+    _ = (target_dir / "metadata.json").write_text(
         json.dumps(data.to_dict(), indent=2) + "\n", encoding="utf-8"
     )
     existing = (
@@ -282,7 +290,7 @@ def aggregate_all(reports_dir: Path, confine_to: Path | None = None) -> list[Sum
         if not child.is_dir():
             continue
         try:
-            child.resolve().relative_to(bound)
+            _ = child.resolve().relative_to(bound)
         except ValueError:
             continue
         results.append(aggregate_target(child))
@@ -299,7 +307,7 @@ def record_finding(
     reproduction_steps: str,
     poc_script: str = "",
     remediation: str = "Implement strict authorization checks and validate user access permissions.",
-) -> dict[str, Any]:
+) -> dict[str, object]:
     slug = sanitize_slug(target_slug)
     sev = severity.lower().strip()
     if sev not in {"critical", "high", "medium", "low", "info", "informational"}:
@@ -318,8 +326,8 @@ def record_finding(
             f"{reproduction_steps}\n"
         )
         with note.open("a", encoding="utf-8") as fh:
-            fh.write(block)
-        aggregate_target(target_dir)
+            _ = fh.write(block)
+        _ = aggregate_target(target_dir)
         return {
             "file": f"reports/{slug}/evidence/recon_notes.md",
             "target": slug,
@@ -348,7 +356,7 @@ def record_finding(
     ]
     if poc_script:
         poc_name = f"poc_{vuln}.py"
-        (pocs_dir / poc_name).write_text(poc_script, encoding="utf-8")
+        _ = (pocs_dir / poc_name).write_text(poc_script, encoding="utf-8")
         body += [
             "## Proof of Concept",
             "",
@@ -356,8 +364,8 @@ def record_finding(
             "",
         ]
     body += ["## Remediation", "", remediation, ""]
-    (findings_dir / finding_name).write_text("\n".join(body), encoding="utf-8")
-    aggregate_target(target_dir)
+    _ = (findings_dir / finding_name).write_text("\n".join(body), encoding="utf-8")
+    _ = aggregate_target(target_dir)
     return {
         "file": f"reports/{slug}/findings/{finding_name}",
         "target": slug,

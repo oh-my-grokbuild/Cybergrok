@@ -5,9 +5,11 @@ from __future__ import annotations
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import final
+
+from . import _coerce
 
 HEADING_RE = re.compile(r"^#{1,4}\s+(.+)$")
 CODE_BLOCK_RE = re.compile(r"```[a-zA-Z0-9_-]*\n.*?```", re.DOTALL)
@@ -102,8 +104,7 @@ def _section_score(heading: str, body: str, keywords: list[str], file_lower: str
 def _trim_section(heading: str, body: str, max_chars: int) -> str:
     if len(body) <= max_chars:
         return body
-    blocks = CODE_BLOCK_RE.findall(body)
-    first = str(blocks[0]) if blocks else ""
+    first = _coerce.first_regex_group(CODE_BLOCK_RE, body)
     if first and len(first) < max_chars:
         return f"{heading}\n\n{first}\n\n*(Truncated for context efficiency)*"
     return body[:max_chars].rstrip() + "\n\n*(Truncated for context efficiency)*"
@@ -118,11 +119,22 @@ class Snippet:
     file: str
     source_kb: str
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "heading": self.heading,
+            "start_line": self.start_line,
+            "score": self.score,
+            "content": self.content,
+            "file": self.file,
+            "source_kb": self.source_kb,
+        }
 
 
+@final
 class Searcher:
+    base_dir: Path
+    root_dir: Path
+
     def __init__(self, base_dir: Path, root_dir: Path) -> None:
         self.base_dir = Path(base_dir)
         self.root_dir = Path(root_dir)

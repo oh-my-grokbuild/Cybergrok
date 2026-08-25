@@ -49,16 +49,16 @@ def test_no_scope_file_denies():
 
 
 def test_broken_scope_raises(tmp_path: Path):
-    (tmp_path / "scope.yaml").write_text("{[ this is not valid yaml", encoding="utf-8")
+    _ = (tmp_path / "scope.yaml").write_text("{[ this is not valid yaml", encoding="utf-8")
     with pytest.raises(ScopeError):
-        find_scope_config(tmp_path)
+        _ = find_scope_config(tmp_path)
 
 
 def test_per_target_scope_is_ignored(tmp_path: Path):
-    (tmp_path / "scope.yaml").write_text("in_scope:\n  - lab.example\n", encoding="utf-8")
+    _ = (tmp_path / "scope.yaml").write_text("in_scope:\n  - lab.example\n", encoding="utf-8")
     target = tmp_path / "reports" / "acme"
     target.mkdir(parents=True)
-    (target / "scope.yaml").write_text("in_scope:\n  - evil.example\n", encoding="utf-8")
+    _ = (target / "scope.yaml").write_text("in_scope:\n  - evil.example\n", encoding="utf-8")
     cfg, path = find_scope_config(tmp_path, "acme")
     assert path == tmp_path / "scope.yaml"
     assert cfg is not None
@@ -88,10 +88,10 @@ def test_host_only_rule_is_default_ports():
 
 
 def test_absolute_slug_cannot_leave_workspace(tmp_path: Path):
-    (tmp_path / "scope.yaml").write_text("in_scope:\n  - lab.example\n", encoding="utf-8")
+    _ = (tmp_path / "scope.yaml").write_text("in_scope:\n  - lab.example\n", encoding="utf-8")
     evil = tmp_path.parent / "evil_scope_dir"
     evil.mkdir(exist_ok=True)
-    (evil / "scope.yaml").write_text("in_scope:\n  - evil.example\n", encoding="utf-8")
+    _ = (evil / "scope.yaml").write_text("in_scope:\n  - evil.example\n", encoding="utf-8")
     cfg, path = find_scope_config(tmp_path, str(evil))
     assert path == tmp_path / "scope.yaml"
     assert cfg is not None
@@ -100,7 +100,7 @@ def test_absolute_slug_cannot_leave_workspace(tmp_path: Path):
 
 
 def test_wrap_extracts_and_blocks_oos(tmp_path: Path):
-    (tmp_path / "scope.yaml").write_text("in_scope:\n  - lab.example\n", encoding="utf-8")
+    _ = (tmp_path / "scope.yaml").write_text("in_scope:\n  - lab.example\n", encoding="utf-8")
     assert extract_targets("httpx", ["-u", "https://lab.example/"]) == ["https://lab.example/"]
     ok, _ = check_targets(["https://lab.example/"], tmp_path)
     assert ok

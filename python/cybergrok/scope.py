@@ -5,15 +5,12 @@ from __future__ import annotations
 import ipaddress
 import posixpath
 import re
-from dataclasses import asdict, dataclass, field
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 from urllib.parse import unquote, urlparse
 
-try:
-    import yaml
-except ImportError:  # pragma: no cover
-    yaml = None  # type: ignore[assignment]
+from . import _coerce
 
 
 class ScopeError(RuntimeError):
@@ -44,48 +41,63 @@ class ValidationResult:
     scope_found: bool = False
     error: str = ""
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "allowed": self.allowed,
+            "target": self.target,
+            "host": self.host,
+            "port": self.port,
+            "path": self.path,
+            "matched_by": self.matched_by,
+            "reason": self.reason,
+            "scope_found": self.scope_found,
+            "error": self.error,
+        }
 
 
-def parse_scope_data(data: dict[str, Any], source_path: str = "") -> ScopeConfig:
-    in_scope = list(data.get("in_scope") or [])
+def _str_list(value: object) -> list[str]:
+    return _coerce.as_str_list(value)
+
+
+def _as_int(value: object, default: int = 0) -> int:
+    if value is None or value == "":
+        return default
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        return int(value)
+    return default
+
+
+def parse_scope_data(data: Mapping[str, object], source_path: str = "") -> ScopeConfig:
+    in_scope = _str_list(data.get("in_scope"))
     # A bare "*" is ignored (fail-closed).
-    for item in data.get("targets") or []:
-        if str(item).strip() == "*":
+    for item in _str_list(data.get("targets")):
+        if item.strip() == "*":
             continue
         in_scope.append(item)
     return ScopeConfig(
         name=str(data.get("name") or data.get("program") or ""),
         target_slug=str(data.get("target_slug") or ""),
         in_scope=in_scope,
-        out_of_scope=list(data.get("out_of_scope") or []),
+        out_of_scope=_str_list(data.get("out_of_scope")),
         allow_ips=bool(data.get("allow_ips", False)),
-        max_requests=int(data.get("max_requests") or 0),
+        max_requests=_as_int(data.get("max_requests") or 0),
         dynamic_target_override=bool(data.get("dynamic_target_override", False)),
         source_path=source_path,
     )
 
 
 def parse_scope_file(path: Path) -> ScopeConfig:
-    if yaml is None:
-        raise ScopeError("PyYAML is required to parse scope.yaml")
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, yaml.YAMLError) as exc:
+        data = _coerce.yaml_load_map(path.read_text(encoding="utf-8"))
+    except TypeError as exc:
+        raise ScopeError(f"Invalid scope file '{path}': expected a mapping") from exc
+    except (OSError, UnicodeError, RuntimeError) as exc:
         raise ScopeError(f"Failed to parse '{path}': {exc}") from exc
-    if not isinstance(data, dict):
-        raise ScopeError(f"Invalid scope file '{path}': expected a mapping")
     return parse_scope_data(data, str(path))
-
-
-def _confine_under(path: Path, root: Path) -> Path | None:
-    resolved = path.resolve()
-    try:
-        resolved.relative_to(root.resolve())
-    except ValueError:
-        return None
-    return resolved
 
 
 def find_scope_config(
@@ -124,7 +136,7 @@ def _split_host_path_rule(rule: str) -> tuple[str, str] | None:
         return None
     if "/" in rule:
         try:
-            ipaddress.ip_network(rule, strict=False)
+            _ = ipaddress.ip_network(rule, strict=False)
             return None
         except ValueError:
             host, rest = rule.split("/", 1)
@@ -163,7 +175,7 @@ def host_is_private_literal(host: str) -> bool:
     except ValueError:
         return False
     mapped = getattr(ip, "ipv4_mapped", None)
-    if mapped is not None:
+    if isinstance(mapped, ipaddress.IPv4Address):
         ip = mapped
     return bool(ip.is_private or ip.is_loopback or ip.is_link_local)
 

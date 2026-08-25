@@ -6,6 +6,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 from .paths import find_workspace_root
 from .scope import ScopeError, find_scope_config, validate_target
@@ -81,5 +82,8 @@ def main_wrap(argv: list[str] | None = None) -> int:
     if not real:
         print(f"cybergrok wrap: {tool} not found", file=sys.stderr)
         return 127
+    return _exec(real, rest)
+
+
+def _exec(real: str, rest: list[str]) -> NoReturn:
     os.execv(real, [real, *rest])
-    return 127

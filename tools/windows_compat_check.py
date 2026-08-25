@@ -2,6 +2,7 @@
 """
 Cybergrok Windows Compatibility Check (Forwarder to doctor.py)
 """
+
 from pathlib import Path
 
 if __name__ == "__main__":

@@ -9,8 +9,8 @@ usage() {
   cat <<'EOF'
 Usage: ./typecheck.sh [--python] [--ts]
 
-  (no flags)     both Python ty and TypeScript tsc
-  --python, -p   ty check python/cybergrok python/tests
+  (no flags)     Python (ty + basedpyright) and TypeScript tsc
+  --python, -p   ty check + basedpyright on first-party Python
   --ts, --typescript, -t
                  npm run typecheck in mcp/
 
@@ -62,6 +62,8 @@ done
 if [ "$RUN_PY" -eq 1 ]; then
   TY="$(need ty)"
   "$TY" check python/cybergrok python/tests --error-on-warning
+  BPR="$(need basedpyright)"
+  "$BPR" python tools scripts examples
 fi
 
 if [ "$RUN_TS" -eq 1 ]; then
