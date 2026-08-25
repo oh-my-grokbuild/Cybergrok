@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cybergrok"
-version = "1.0.0"
-description = "Autonomous offensive security plugin for Grok Build (Python core + TypeScript MCP)"
+version = "0.1.0"
+description = "Autonomous offensive security plugin for Grok Build"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 license = { text = "MIT" }
-authors = [{ name = "Grok Build Workforce" }]
+authors = [{ name = "Kenny Dizi" }]
 dependencies = [
     "pyyaml>=6.0.2",
     "requests>=2.32.3",
@@ -17,6 +17,8 @@ dependencies = [
     "rich>=13.9.4",
     "markdown>=3.7",
     "jinja2>=3.1.5",
+    "ruff>=0.16.4",
+    "ty>=0.0.74",
 ]
 
 [project.optional-dependencies]
