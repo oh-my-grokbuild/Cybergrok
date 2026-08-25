@@ -8,10 +8,14 @@ The **Cybergrok MCP Server** implements the official **Model Context Protocol (M
 
 Cybergrok includes an intelligent, non-destructive **Universal Auto-Injector** that automatically detects your installed AI clients across **Windows, macOS, and Linux**, creates timestamped backups of your configurations (`.bak`), and cleanly wires Cybergrok into all of them.
 
-### Instant Global Installation (Zero-Go NPX)
+### Local repository setup
 ```bash
-npx -y cybergrok-mcp install
+./setup.sh
+# project MCP: node mcp/launch.cjs  (cwd = this checkout)
+# installed plugin MCP: ${GROK_PLUGIN_ROOT}/mcp/launch.cjs
 ```
+
+There is no published `npx cybergrok-mcp` package. Use `mcp/launch.cjs` or `scripts/cybergrok-mcp.sh`.
 
 ### Or via Local Repository Setup:
 ```bash
@@ -21,21 +25,21 @@ python scripts/setup_mcp.py
 ### Auto-Installer Options:
 | Flag | Description | Example |
 | :--- | :--- | :--- |
-| `--dry-run` | Preview configuration changes without touching disk | `npx cybergrok-mcp install --dry-run` |
-| `--status` | Display discovery matrix & wiring status for all AI clients | `npx cybergrok-mcp status` |
-| `--local` | Wire directly to local compiled binary (`tools/bin/cybergrok-mcp`) | `python scripts/setup_mcp.py --local` |
-| `--clients=` | Target specific clients (comma-separated) | `npx cybergrok-mcp install --clients=cursor,claude-desktop` |
-| `--uninstall`| Cleanly remove Cybergrok from all client configs | `npx cybergrok-mcp uninstall` |
-| `--force` | Generate config files even if AI client is not yet detected | `npx cybergrok-mcp install --force` |
+| `--dry-run` | Preview configuration changes without touching disk | `python scripts/setup_mcp.py --dry-run` |
+| `--status` | Display discovery matrix & wiring status for all AI clients | `python scripts/setup_mcp.py --status` |
+| `--local` | Wire directly to `mcp/launch.cjs` | `python scripts/setup_mcp.py --local` |
+| `--clients=` | Target specific clients (comma-separated) | `python scripts/setup_mcp.py --clients=cursor,claude-desktop` |
+| `--uninstall`| Cleanly remove Cybergrok from all client configs | `python scripts/setup_mcp.py --uninstall` |
+| `--force` | Generate config files even if AI client is not yet detected | `python scripts/setup_mcp.py --force` |
 
 ---
 
-## ⚡ Method 1: Manual Zero-Go NPX Setup (Instant)
-
-If you prefer manual configuration, Node.js (v18+) automatically downloads the verified binary from GitHub Releases:
+## ⚡ Method 1: Manual stdio launch
 
 ```bash
-npx -y cybergrok-mcp
+node mcp/launch.cjs
+# or
+bash scripts/cybergrok-mcp.sh
 ```
 
 ---
@@ -47,8 +51,8 @@ Add to your OpenCode configuration (`opencode.json` or `~/.config/opencode/confi
 {
   "mcp_servers": {
     "cybergrok": {
-      "command": "npx",
-      "args": ["-y", "cybergrok-mcp"]
+      "command": "node",
+      "args": ["mcp/launch.cjs"]
     }
   }
 }
@@ -63,8 +67,8 @@ In **Kilo MCP Settings** or in `.kilo/mcp.json`:
 {
   "mcpServers": {
     "cybergrok": {
-      "command": "npx",
-      "args": ["-y", "cybergrok-mcp"]
+      "command": "node",
+      "args": ["mcp/launch.cjs"]
     }
   }
 }
@@ -78,15 +82,15 @@ In **Kilo MCP Settings** or in `.kilo/mcp.json`:
 3. Configure:
    - **Name**: `cybergrok`
    - **Type**: `command`
-   - **Command**: `npx -y cybergrok-mcp`
+   - **Command**: `node mcp/launch.cjs`
 
 Or add `.cursor/mcp.json` to your project workspace root:
 ```json
 {
   "mcpServers": {
     "cybergrok": {
-      "command": "npx",
-      "args": ["-y", "cybergrok-mcp"]
+      "command": "node",
+      "args": ["mcp/launch.cjs"]
     }
   }
 }
@@ -104,8 +108,8 @@ Add to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "cybergrok": {
-      "command": "npx",
-      "args": ["-y", "cybergrok-mcp"]
+      "command": "node",
+      "args": ["mcp/launch.cjs"]
     }
   }
 }
@@ -120,8 +124,8 @@ Add to `~/.codeium/windsurf/mcp_config.json` or workspace `mcp_config.json`:
 {
   "mcpServers": {
     "cybergrok": {
-      "command": "npx",
-      "args": ["-y", "cybergrok-mcp"]
+      "command": "node",
+      "args": ["mcp/launch.cjs"]
     }
   }
 }
@@ -136,8 +140,8 @@ Open the MCP Servers extension tab, select **Edit Settings**, and add:
 {
   "mcpServers": {
     "cybergrok": {
-      "command": "npx",
-      "args": ["-y", "cybergrok-mcp"],
+      "command": "node",
+      "args": ["mcp/launch.cjs"],
       "disabled": false,
       "autoApprove": [
         "cybergrok_search_knowledge",
@@ -182,8 +186,8 @@ Add to `~/.config/zed/settings.json`:
 {
   "context_servers": {
     "cybergrok": {
-      "command": "npx",
-      "args": ["-y", "cybergrok-mcp"]
+      "command": "node",
+      "args": ["mcp/launch.cjs"]
     }
   }
 }
@@ -202,8 +206,8 @@ Or in `~/.claude.json`:
 {
   "mcpServers": {
     "cybergrok": {
-      "command": "npx",
-      "args": ["-y", "cybergrok-mcp"]
+      "command": "node",
+      "args": ["mcp/launch.cjs"]
     }
   }
 }
@@ -241,8 +245,8 @@ Add to your Antigravity MCP settings or configuration JSON:
 {
   "mcpServers": {
     "cybergrok": {
-      "command": "npx",
-      "args": ["-y", "cybergrok-mcp"]
+      "command": "node",
+      "args": ["mcp/launch.cjs"]
     }
   }
 }

@@ -42,7 +42,7 @@ Construct your requests using the **4-Pillar Formula**:
 ```
 
 ### 1. Direct Target & Scope Anchor
-Cybergrok supports dynamic operator authorization (`dynamic_target_override: true` in `scope.yaml`). Simply provide the target URL or domain:
+Cybergrok is fail-closed: add the host to workspace `scope.yaml` `in_scope` before probing. A named URL is not authorization:
 > *"Assess endpoint and parameters on `https://example.com` and generate structured findings in `reports/`."*  
 > *"Perform Phase 1 reconnaissance on target domain `example.com`."*
 

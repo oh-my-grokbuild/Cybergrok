@@ -30,7 +30,7 @@ The agent refuses a target stating it is not in `scope.yaml` or returns an autho
 
 ### Resolutions:
 1. **Dynamic Target Override**:
-   * `scope.yaml` has `dynamic_target_override: true` and `targets: ["*"]` enabled by default.
+   * `scope.yaml` is fail-closed. A bare `*` is ignored. Add the engagement hostname under `in_scope`.
    * Any URL or domain requested by the operator is automatically authorized without manual configuration edits.
 2. **Context Reset**:
    * Send `/reset` or `/new` in Telegram to clear previous refusal weights in conversation context.

@@ -38,7 +38,7 @@ Cybergrok natively integrates MCP servers for client-side evaluation, structured
 1. **Cybergrok Native MCP Server (`cybergrok-mcp`)**:
    * High-speed, Go-native JSON-RPC 2.0 MCP server exposing **10 specialized security tools**, 2 resources, and 2 prompts.
    * Compatible with **all AI providers** (Claude, GPT-4o, DeepSeek, Gemini, Llama) and clients (OpenCode, Cursor, Claude Desktop, Windsurf, Cline, Roo Code, Claude Code CLI, Continue.dev, Zed, Kilo Code, Grok Build, Codex, Google Antigravity).
-   * **1-Click Universal Auto-Installer**: `npx -y cybergrok-mcp install` or `python scripts/setup_mcp.py`.
+   * **MCP launch**: `node mcp/launch.cjs` or `python scripts/setup_mcp.py`.
    * See [docs/MCP_SETUP.md](MCP_SETUP.md) for full guide and CLI options.
 2. **Browser MCP (`@modelcontextprotocol/server-puppeteer`)**:
    * Launches headless Chromium in container isolation.
@@ -50,7 +50,7 @@ Cybergrok natively integrates MCP servers for client-side evaluation, structured
 
 ## 🎯 3. Offensive Skills (200+ Modules)
 
-Skills reside in `skills/` and load through the Grok Build plugin (`plugin.json`). The core engine is Python + TypeScript, not Go or Hermes.
+Skills reside in `skills/` and load through the Grok Build plugin (`plugin.json`). The core engine is Python + TypeScript.
 
 ### Invoking Specific Playbooks:
 Operators can prompt the agent to utilize specific methodologies:

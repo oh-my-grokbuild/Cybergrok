@@ -44,7 +44,7 @@ This document records the completed milestones, active architectural capabilitie
 - **NPM Package**: `cybergrok-mcp` (`npm/package.json` & `npm/bin/cybergrok-mcp.js`).
 - **1-Click Universal Auto-Injector Engine**: Instant multi-client discovery, non-destructive config injection, and backup rotation via:
   ```bash
-  npx -y cybergrok-mcp install
+  node mcp/launch.cjs
   ```
 - **Local Python Setup Tool**: `scripts/setup_mcp.py` for local and air-gapped developer environments.
 - **Automated Multi-Platform CI/CD**: GitHub Actions workflow (`.github/workflows/mcp-release.yml`) cross-compiling Go binaries for Windows AMD64, Linux AMD64, macOS ARM64 (Apple Silicon), and macOS AMD64 (Intel), complete with SHA256 checksums and automated npm publishing.
