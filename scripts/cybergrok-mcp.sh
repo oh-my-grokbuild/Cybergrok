@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Launch the TypeScript Cybergrok MCP server (stdio).
+# Launch the TypeScript Cybergrok MCP server (stdio). Never npm-installs at spawn.
 set -euo pipefail
 
 ROOT="${CYBERGROK_ROOT:-${GROK_PLUGIN_ROOT:-}}"
-if [ -z "${ROOT}" ]; then
+if [ -z "${ROOT}" ] || [ ! -d "${ROOT}/python/cybergrok" ]; then
   ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fi
 
@@ -14,16 +14,9 @@ if [ -x "${ROOT}/venv/bin/python3" ]; then
   export PATH="${ROOT}/venv/bin:${PATH}"
 fi
 
-JS="${ROOT}/mcp/dist/index.js"
-if [ ! -f "$JS" ]; then
-  if command -v npm >/dev/null 2>&1; then
-    (cd "${ROOT}/mcp" && npm install --silent && npm run build)
-  fi
-fi
-
-if [ ! -f "$JS" ]; then
-  echo "cybergrok-mcp TypeScript build missing. Run ./setup.sh" >&2
+if [ ! -f "${ROOT}/mcp/dist/index.js" ]; then
+  echo "cybergrok-mcp TypeScript build missing (${ROOT}/mcp/dist/index.js). Run ./setup.sh" >&2
   exit 1
 fi
 
-exec node "$JS" "$@"
+exec node "${ROOT}/mcp/launch.cjs" "$@"

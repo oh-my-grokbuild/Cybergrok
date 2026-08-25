@@ -14,8 +14,15 @@ from datetime import datetime
 from pathlib import Path
 import markdown
 
+def _reports_dir() -> Path:
+    raw = os.environ.get("GROK_WORKSPACE_ROOT") or os.environ.get("CYBERGROK_WORKSPACE")
+    if raw:
+        return Path(raw).expanduser().resolve() / "reports"
+    return Path(__file__).resolve().parent.parent / "reports"
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
-REPORTS_DIR = BASE_DIR / "reports"
+REPORTS_DIR = _reports_dir()
 
 REPORT_HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -498,7 +505,11 @@ def main():
     parser.add_argument("target", nargs="?", help="Target slug name (e.g. target_example_com)")
     parser.add_argument("--all", action="store_true", help="Generate reports for all targets")
     parser.add_argument("--no-pdf", action="store_true", help="Generate HTML only without rendering PDF")
+    parser.add_argument("--root", help="Workspace root that contains reports/ (default: GROK_WORKSPACE_ROOT or plugin repo)")
     args = parser.parse_args()
+    global REPORTS_DIR
+    if args.root:
+        REPORTS_DIR = Path(args.root).expanduser().resolve() / "reports"
 
     targets_to_process = []
     if args.all:

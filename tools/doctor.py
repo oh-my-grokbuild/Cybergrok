@@ -113,16 +113,22 @@ def check_config(root_dir: Path, auto_fix: bool = False) -> tuple[int, int, int]
 
     plugin = root_dir / "plugin.json"
     agents = root_dir / "AGENTS.md"
+    session_agent = root_dir / ".grok" / "agents" / "cybergrok.md"
+    project_plugin = root_dir / ".grok" / "plugins" / "cybergrok" / "plugin.json"
     mcp_entry = root_dir / "scripts" / "cybergrok-mcp.sh"
+    mcp_launch = root_dir / "mcp" / "launch.cjs"
     py_pkg = root_dir / "python" / "cybergrok" / "rpc.py"
     ts_src = root_dir / "mcp" / "src" / "index.ts"
     ts_dist = root_dir / "mcp" / "dist" / "index.js"
 
     for label, path in (
         ("plugin.json", plugin),
+        ("session agent .grok/agents/cybergrok.md", session_agent),
+        ("project plugin .grok/plugins/cybergrok", project_plugin),
         ("AGENTS.md", agents),
         ("Python core (python/cybergrok)", py_pkg),
         ("TypeScript MCP source", ts_src),
+        ("MCP launch.cjs", mcp_launch),
         ("MCP launcher", mcp_entry),
     ):
         if path.exists():

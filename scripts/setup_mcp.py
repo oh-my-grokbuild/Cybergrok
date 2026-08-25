@@ -30,11 +30,16 @@ CYBERGROK_ROOT = Path(__file__).resolve().parent.parent
 
 def get_local_binary_path():
     is_win = platform.system() == "Windows"
-    ext = ".exe" if is_win else ""
-    candidates = [
-        CYBERGROK_ROOT / "tools" / "bin" / f"cybergrok-mcp{ext}",
-        CYBERGROK_ROOT / f"cybergrok-mcp{ext}",
-    ]
+    if is_win:
+        candidates = [
+            CYBERGROK_ROOT / "scripts" / "cybergrok-mcp.cmd",
+            CYBERGROK_ROOT / "mcp" / "launch.cjs",
+        ]
+    else:
+        candidates = [
+            CYBERGROK_ROOT / "scripts" / "cybergrok-mcp.sh",
+            CYBERGROK_ROOT / "mcp" / "launch.cjs",
+        ]
     for c in candidates:
         if c.is_file():
             return str(c)
@@ -78,15 +83,24 @@ def get_client_definitions(use_local=False, local_bin=None):
 
     appdata = Path(os.environ.get("APPDATA", home / "AppData" / "Roaming")) if is_win else home
 
-    if use_local and local_bin:
+    launcher = local_bin or get_local_binary_path()
+    if launcher and launcher.endswith(".cjs"):
         default_def = {
-            "command": str(local_bin),
-            "args": ["-workspace", str(CYBERGROK_ROOT)],
+            "command": "node",
+            "args": [launcher],
+            "env": {"CYBERGROK_ROOT": str(CYBERGROK_ROOT)},
+        }
+    elif launcher:
+        default_def = {
+            "command": launcher,
+            "args": [],
+            "env": {"CYBERGROK_ROOT": str(CYBERGROK_ROOT)},
         }
     else:
         default_def = {
-            "command": "npx",
-            "args": ["-y", "cybergrok-mcp"],
+            "command": "node",
+            "args": [str(CYBERGROK_ROOT / "mcp" / "launch.cjs")],
+            "env": {"CYBERGROK_ROOT": str(CYBERGROK_ROOT)},
         }
 
     return [
@@ -143,11 +157,8 @@ def get_client_definitions(use_local=False, local_bin=None):
                 **default_def,
                 "disabled": False,
                 "autoApprove": [
-                    "cybergrok_search_knowledge",
                     "cybergrok_list_skills",
                     "cybergrok_get_skill",
-                    "cybergrok_scan_secrets",
-                    "cybergrok_validate_scope",
                 ],
             },
         },
@@ -164,11 +175,8 @@ def get_client_definitions(use_local=False, local_bin=None):
                 **default_def,
                 "disabled": False,
                 "autoApprove": [
-                    "cybergrok_search_knowledge",
                     "cybergrok_list_skills",
                     "cybergrok_get_skill",
-                    "cybergrok_scan_secrets",
-                    "cybergrok_validate_scope",
                 ],
             },
         },

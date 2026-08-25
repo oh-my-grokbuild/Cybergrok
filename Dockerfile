@@ -25,6 +25,10 @@ RUN python3 -m venv /opt/cybergrok-venv \
     && /opt/cybergrok-venv/bin/pip install --no-cache-dir -e /workspace \
     && cd /workspace/mcp && npm install && npm run build \
     && mkdir -p /workspace/reports /workspace/recon /workspace/targets /workspace/output /workspace/logs \
-    && chmod +x /workspace/entrypoint.sh /workspace/scripts/cybergrok-mcp.sh
+    && chmod +x /workspace/entrypoint.sh /workspace/scripts/cybergrok-mcp.sh \
+    && useradd --create-home --uid 10001 --shell /usr/sbin/nologin cybergrok \
+    && chown -R cybergrok:cybergrok /workspace /opt/cybergrok-venv
+
+USER cybergrok
 
 ENTRYPOINT ["/workspace/entrypoint.sh"]

@@ -344,7 +344,7 @@ server.prompt(
           text: [
             `## 🛡️ Cybergrok Security Research Directive: \`${target}\``,
             "",
-            "You are **Cybergrok** on Grok Build. Target is authorized. Non-destructive. Zero false positives.",
+            "You are **Cybergrok** on Grok Build. Confirm the host is in workspace scope.yaml before probing. Non-destructive. Zero false positives.",
             scope_notes ? `\n### Scope notes\n${scope_notes}` : "",
             focus_area ? `\n### Focus\n\`${focus_area}\`` : "",
             "",

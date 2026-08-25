@@ -6,12 +6,17 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 
 export function findPluginRoot(): string {
-  const env = process.env.CYBERGROK_ROOT || process.env.GROK_PLUGIN_ROOT;
-  if (env && existsSync(env)) {
-    return env;
+  for (const envName of ["CYBERGROK_ROOT", "GROK_PLUGIN_ROOT"]) {
+    const env = process.env[envName];
+    if (env && existsSync(join(env, "python", "cybergrok"))) {
+      return env;
+    }
   }
-  // mcp/dist -> mcp -> repo
   return join(here, "..", "..");
+}
+
+export function findWorkspaceRoot(): string {
+  return process.env.GROK_WORKSPACE_ROOT || process.env.CYBERGROK_WORKSPACE || process.cwd();
 }
 
 export function findPython(): string {
@@ -28,18 +33,23 @@ export function findPython(): string {
 }
 
 export function rpc<T = Record<string, unknown>>(op: string, args: Record<string, unknown> = {}): T {
-  const root = findPluginRoot();
+  const pluginRoot = findPluginRoot();
+  const workspace = args.workspace || findWorkspaceRoot();
   const python = findPython();
   const payload = JSON.stringify({
     op,
-    args: { ...args, workspace: args.workspace || process.env.GROK_WORKSPACE_ROOT || process.cwd() },
+    args: { ...args, workspace, plugin_root: pluginRoot },
   });
-  const result = spawnSync(python, ["-m", "cybergrok", "rpc", payload], {
-    cwd: root,
+  const result = spawnSync(python, ["-m", "cybergrok", "rpc"], {
+    cwd: pluginRoot,
     encoding: "utf-8",
+    input: payload,
+    timeout: 120_000,
     env: {
       ...process.env,
-      PYTHONPATH: [join(root, "python"), process.env.PYTHONPATH || ""].filter(Boolean).join(
+      CYBERGROK_ROOT: pluginRoot,
+      GROK_WORKSPACE_ROOT: String(workspace),
+      PYTHONPATH: [join(pluginRoot, "python"), process.env.PYTHONPATH || ""].filter(Boolean).join(
         process.platform === "win32" ? ";" : ":",
       ),
     },
@@ -52,7 +62,12 @@ export function rpc<T = Record<string, unknown>>(op: string, args: Record<string
     const err = (result.stderr || result.stdout || "").trim();
     throw new Error(err || `Python RPC exited with ${result.status}`);
   }
-  const parsed = JSON.parse(result.stdout) as { ok: boolean; result?: T; error?: string };
+  let parsed: { ok: boolean; result?: T; error?: string };
+  try {
+    parsed = JSON.parse(result.stdout) as { ok: boolean; result?: T; error?: string };
+  } catch {
+    throw new Error(`Python RPC returned non-JSON: ${(result.stdout || "").slice(0, 200)}`);
+  }
   if (!parsed.ok) {
     throw new Error(parsed.error || "Python RPC failed");
   }
