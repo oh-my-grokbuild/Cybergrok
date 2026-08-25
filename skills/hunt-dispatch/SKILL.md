@@ -1,26 +1,26 @@
 ---
 name: hunt-dispatch
-description: Skill-set loader for /hunt orchestrator. Fingerprints the target, picks the right platform attack skills, and loads the Red Team or WAPT skill set. Use when /hunt has just received a mode answer (redteam or wapt + blackbox|greybox) and needs to load the appropriate skills and print the taxonomy. Not for direct user invocation.
+description: Skill-set loader for /cybergrok-hunt orchestrator. Fingerprints the target, picks the right platform attack skills, and loads the Red Team or WAPT skill set. Use when /cybergrok-hunt has just received a mode answer (redteam or wapt + blackbox|greybox) and needs to load the appropriate skills and print the taxonomy. Not for direct user invocation.
 user-invocable: false
 disable-model-invocation: true
 ---
 
 # hunt-dispatch
 
-skill-set loader for `/hunt`. one concept (which skills to load), one place.
+skill-set loader for `/cybergrok-hunt`. one concept (which skills to load), one place.
 
 ## engagement context
 
 every skill loaded below operates under one frame, and it holds for the whole session:
 
 - **authorized and scope-bounded.** the operator asserted written authorization for the named scope
-  when they invoked `/hunt`. testing stays inside it. an out-of-scope host ends the run — it does not
+  when they invoked `/cybergrok-hunt`. testing stays inside it. an out-of-scope host ends the run — it does not
   widen it.
 - **the output is a finding, not an exploit.** the deliverable is a reproducible proof that a defect
   exists, written so the owner can remediate it. enough to demonstrate impact; no further.
 - **remediation is the point.** these skills exist so defects get fixed by the people who own them.
 
-this frame is stated here because it is the choke point every `/hunt` run passes through before any
+this frame is stated here because it is the choke point every `/cybergrok-hunt` run passes through before any
 `hunt-*` skill loads. it is not a prompt and needs no answer.
 
 invocation contract:
@@ -251,10 +251,10 @@ hunt-source-leak     hunt-tls-network
 
 report format: `report-writing` (`bugcrowd-reporting` if the target is on bugcrowd).
 
-box=greybox: creds already captured by `/hunt`, available in session memory.
+box=greybox: creds already captured by `/cybergrok-hunt`, available in session memory.
 
 **do not fan out across the authenticated hunt-\* set until the creds are
-validated.** `/hunt` only prompts for and stores creds (commands/hunt.md) — it
+validated.** `/cybergrok-hunt` only prompts for and stores creds (commands/cybergrok-hunt.md) — it
 does not confirm they work. firing every authenticated test with dead, MFA-gated,
 or wrong-role creds wastes the whole run and produces false "no auth surface"
 conclusions. run a single low-cost auth preflight first:
@@ -354,15 +354,15 @@ disclosed in the deliverable. the fix is structural: pass scope as data, deny
 by verb before allowing by verb, and treat every discovered host as out of scope
 until told otherwise.
 
-## step 4 — return control to /hunt
+## step 4 — return control to /cybergrok-hunt
 
-after taxonomy print, hand control back to `/hunt` for step 3 (sibling delegation) and step 4 (active testing). do not run probes here — this skill only loads context.
+after taxonomy print, hand control back to `/cybergrok-hunt` for step 3 (sibling delegation) and step 4 (active testing). do not run probes here — this skill only loads context.
 
 ## privacy
 
 never echo back, log, or persist:
 - SOW / scope-of-work / engagement-letter content
-- grey box credentials (kept in session memory by `/hunt`, never written to disk)
+- grey box credentials (kept in session memory by `/cybergrok-hunt`, never written to disk)
 - client identifiers in user-level memory
 
 ---
@@ -372,5 +372,5 @@ never echo back, log, or persist:
 - **`bb-methodology`** — When PART 0 mode confirmation completes. Workflow primitive: `bb-methodology` confirms engagement type (red team vs WAPT vs bug bounty); the answer feeds directly into this skill's `mode=redteam` / `mode=wapt` invocation.
 - **`redteam-mindset`** + **`mid-engagement-ir-detection`** — When `mode=redteam` is loaded. Workflow primitive: these are the always-on skills loaded first by step 2 of the redteam flow before any platform skill or hunt-* skill.
 - **`okta-attack`** / **`m365-entra-attack`** / **`enterprise-vpn-attack`** / **`vmware-vcenter-attack`** / **`cloud-iam-deep`** / **`supply-chain-attack-recon`** / **`apk-redteam-pipeline`** — When fingerprint signals match. Workflow primitive: step 1's curl fingerprint scan against `recon/<target>/live-hosts.txt` maps banner / domain signals to one or more of these platform skills.
-- **`hunt-rce`** / **`hunt-sqli`** / **`hunt-ssrf`** / **`hunt-ato`** / **all other hunt-* skills`** — When the mode-specific skill set is being printed. Workflow primitive: this skill is the loader; it names the hunt-* skills but does not run probes — actual hunting happens after step 4 returns control to `/hunt`.
+- **`hunt-rce`** / **`hunt-sqli`** / **`hunt-ssrf`** / **`hunt-ato`** / **all other hunt-* skills`** — When the mode-specific skill set is being printed. Workflow primitive: this skill is the loader; it names the hunt-* skills but does not run probes — actual hunting happens after step 4 returns control to `/cybergrok-hunt`.
 - **`report-writing`** vs **`redteam-report-template`** — When the taxonomy print specifies the report format. Workflow primitive: `mode=wapt` ends with `report-writing` as the deliverable format; `mode=redteam` ends with `redteam-report-template` instead.

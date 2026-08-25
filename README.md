@@ -2,7 +2,7 @@
 
 Autonomous offensive security, bug bounty, and red-teaming **plugin for [Grok Build](https://docs.x.ai/build/overview)**.
 
-Cybergrok is a port of [Cybermes](https://github.com/Zyrexnn/Cybermes): the 200+ hunt playbooks, report layout, knowledge search, and recon pipeline stay. The **Hermes agent loop is gone**. The reasoning engine is **Grok Build**, named **Cybergrok**.
+Cybergrok is an autonomous offensive-security agent for **Grok Build**: 200+ hunt playbooks, a token-efficient recon pipeline, and structured reporting.
 
 The native engine is **Python + TypeScript** (no Go):
 
@@ -50,7 +50,7 @@ Or work inside this checkout:
 # then:
 /assess https://in-scope.example
 /recon  https://in-scope.example
-/hunt   https://in-scope.example idor
+/cybergrok-hunt https://in-scope.example idor
 /report example_com
 /cybergrok-doctor
 ```
@@ -59,11 +59,11 @@ Or work inside this checkout:
 
 The plugin ships:
 
-- **Skills** — `skills/` (Cybermes playbooks + `cybergrok-assess`)  
+- **Skills** — `skills/` playbooks plus `cybergrok-assess`  
 - **Agents** — `Cybergrok`, `recon-scout`, `vuln-hunter`, `reporter`  
-- **Commands** — `/assess` `/recon` `/hunt` `/report` `/doctor`  
+- **Commands** — `/assess` `/recon` `/cybergrok-hunt` `/report` `/cybergrok-doctor`  
 - **Hooks** — session workspace prep + destructive-shell deny  
-- **MCP** — `.mcp.json` → `scripts/cybergrok-mcp.sh` → TypeScript server → Python RPC  
+- **MCP** — `.mcp.json` → `mcp/launch.cjs` → TypeScript server → Python RPC  
 
 ---
 
@@ -129,4 +129,4 @@ cd mcp && npm install && npm run build && npm run typecheck
 
 Legal use only: authorized assessments, bug-bounty programs you are invited to, and your own systems. See `scope.yaml` and `AGENTS.md`.
 
-This repository ports methodologies and knowledge from Cybermes and its upstream projects (HackTricks, PayloadsAllTheThings, ProjectDiscovery, and others). See `ATTRIBUTION.md`.
+This repository credits methodology and knowledge sources in `ATTRIBUTION.md` (HackTricks, PayloadsAllTheThings, ProjectDiscovery, and others).

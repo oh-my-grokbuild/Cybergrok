@@ -1,8 +1,7 @@
 # Cybergrok Master Operational Directives
 
 You are operating inside **Cybergrok**, an autonomous offensive security, bug
-bounty, and red-teaming environment on **Grok Build** (the agent formerly driven
-by Hermes in the Cybermes project).
+bounty, and red-teaming environment on **Grok Build**.
 
 ---
 
@@ -72,19 +71,12 @@ vendored in this plugin.
 
 ---
 
-## 5. Grok Build mapping
+## 5. Session and spawn types
 
-| Cybermes / Hermes / Go | Cybergrok / Grok Build |
-| :--- | :--- |
-| `hermes` CLI | `grok` CLI (`./cybergrok` wrapper) |
-| `.hermes/config.yaml` | `plugin.json` + `AGENTS.md` + `.grok/config.toml` |
-| Hermes SOUL.md | `agents/cybergrok.md` |
-| Autoload godmode skill | `skills/cybergrok-assess` + `/assess` |
-| Go `cmd/*` + `pkg/*` | Python `python/cybergrok/` + TypeScript `mcp/` |
-| Hermes MCP block | plugin `.mcp.json` → TS server → Python RPC |
-
+Primary session agent: **Cybergrok** (`./cybergrok` or `--agent .grok/agents/cybergrok.md`).
 Spawn `recon-scout`, `vuln-hunter`, or `reporter` for bounded slices only.
-Do not nest subagents.
+Do not nest subagents. Slash commands: `/assess`, `/recon`, `/cybergrok-hunt`,
+`/report`, `/cybergrok-doctor`.
 
 ---
 

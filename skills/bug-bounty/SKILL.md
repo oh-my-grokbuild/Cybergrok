@@ -1589,7 +1589,7 @@ Don't bypass either step. Mode determines what counts as a finding; topic determ
 
 ### Engagement scaffolding
 
-The `/hunt` slash-command and the `hunt <target>` shell helper (see this repo's `cmd/` directory) pre-create the engagement scaffold:
+The `/cybergrok-hunt` slash command scaffolds the engagement workspace:
 
 - `targets/<target>/scope.md` — declared scope, pasted from the program page
 - `targets/<target>/findings/` — one MD per validated finding

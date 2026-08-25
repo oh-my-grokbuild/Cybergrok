@@ -12,7 +12,7 @@ To maintain high code quality, security standards, and reproducibility across au
    - Direct pushes to `main` and `dev` are restricted.
    - **`dev` branch**: Primary development branch. All Pull Requests (PRs) should be branched from and targeted against `dev`.
    - **`main` branch**: Production-ready, stable releases only. `dev` is merged into `main` after complete testing and tagging.
-   - Every PR requires review and explicit approval by the repository maintainer ([@Zyrexnn](https://github.com/Zyrexnn)) before merging.
+   - Every PR requires review and explicit approval by the repository maintainer before merging.
 
 2. **Zero Sensitive Data / Sanitization Standard**:
    - **NEVER** include real target domains, live IP addresses, production credentials, internal tokens, or actual client assessment data.
@@ -53,17 +53,13 @@ git checkout -b fix/your-fix-name
 ```
 
 ### 3. Make and Verify Changes
-* Run Go test suite for core packages:
+* Run the Python engine tests:
   ```bash
-  go test ./pkg/... -v
+  PYTHONPATH=python pytest python/tests -q
   ```
-* Ensure all Go CLI tools compile cleanly:
+* Typecheck the TypeScript MCP server:
   ```bash
-  go build ./cmd/...
-  ```
-* Ensure Python scripts compile and pass linting:
-  ```bash
-  python3 -m py_compile tools/<your_script>.py
+  cd mcp && npm run typecheck
   ```
 * On Windows, test compatibility:
   ```powershell

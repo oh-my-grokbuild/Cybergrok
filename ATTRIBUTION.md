@@ -1,6 +1,6 @@
 # Third-Party Notices & Upstream Attributions
 
-**Cybergrok** is a Grok Build port of [Cybermes](https://github.com/Zyrexnn/Cybermes) (Apache-2.0). The Hermes agent loop and Go core were replaced with Grok Build + Python + TypeScript. Playbooks, knowledge sources, and methodology remain attributed to their original authors.
+**Cybergrok** is a Grok Build offensive-security plugin (Python + TypeScript). Playbooks, knowledge sources, and methodology remain attributed to their original authors.
 
 This project gratefully acknowledges the open-source and offensive security research community:
 

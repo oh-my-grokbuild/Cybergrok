@@ -5,8 +5,7 @@ We would like to express our gratitude to everyone who helps build, research, ma
 ---
 
 ### 👑 Core Authors & Leads
-- **[Zyrexnn](https://github.com/Zyrexnn)** — Project Lead, Architecture & Offensive Research
-- **[Claude](https://github.com/claude)** (`81847+claude@users.noreply.github.com`) — AI Co-Author & Security Architecture Research
+- Cybergrok maintainers — plugin, Python engine, TypeScript MCP, and Grok Build agent surface
 
 ---
 
@@ -19,6 +18,6 @@ We would like to express our gratitude to everyone who helps build, research, ma
 ---
 
 ### 🤝 Acknowledgments & Upstream Projects
-- **[NousResearch/Grok Build-Agent](https://github.com/NousResearch/Grok Build-Agent)** — Core autonomous agent engine
+- **[Grok Build](https://docs.x.ai/build/overview)** — Agent runtime (`grok` CLI / TUI)
 - **[ProjectDiscovery](https://github.com/projectdiscovery)** — Reconnaissance & scanning toolchain (`httpx`, `subfinder`, `katana`, `nuclei`)
 - **[PayloadsAllTheThings](https://github.com/swisskyrepo/PayloadsAllTheThings)** & **[SecLists](https://github.com/danielmiessler/SecLists)** — Offensive security knowledge bases & wordlists

@@ -1,14 +1,13 @@
 {
   "name": "cybergrok",
   "version": "1.0.0",
-  "description": "Autonomous offensive security plugin for Grok Build. Session agent Cybergrok, Python tools, TypeScript MCP. Ports Cybermes playbooks (no Go, no Hermes).",
+  "description": "Autonomous offensive security plugin for Grok Build. Session agent Cybergrok, Python tools, TypeScript MCP.",
   "author": {
     "name": "Grok Build Workforce"
   },
   "homepage": "https://github.com/search?q=cybergrok",
   "keywords": [
     "cybergrok",
-    "cybermes",
     "bug-bounty",
     "red-team",
     "offensive-security",

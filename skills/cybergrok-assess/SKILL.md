@@ -7,8 +7,7 @@ description: >
 
 # Cybergrok Assessment (Grok Build)
 
-This is the autoload orchestrator that used to live in Hermes
-(`autonomous-godmode-hunter`). Run it on Grok Build.
+This is the autoload orchestrator for a full Cybergrok assessment on Grok Build.
 
 ## 1. Authorization
 

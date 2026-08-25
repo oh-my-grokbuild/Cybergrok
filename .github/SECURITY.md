@@ -10,7 +10,7 @@
 
 ## Reporting a Vulnerability
 
-We take the security of Cybermes seriously. If you discover a security vulnerability within Cybermes itself:
+We take the security of Cybergrok seriously. If you discover a security vulnerability within Cybergrok itself:
 
 1. **Do NOT open a public GitHub issue.**
 2. Report the vulnerability privately via GitHub Security Advisories or by contacting the maintainers directly.
