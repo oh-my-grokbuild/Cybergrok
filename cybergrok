@@ -31,14 +31,20 @@ AGENT_FILE="${SCRIPT_DIR}/.grok/agents/cybergrok.md"
 if [ ! -f "${AGENT_FILE}" ]; then
   AGENT_FILE="${SCRIPT_DIR}/agents/cybergrok.md"
 fi
-export GROK_AGENT="${GROK_AGENT:-${AGENT_FILE}}"
 
 GROK_ARGS=()
-# Prefer the session agent definition (project .grok/agents/ or plugin agents/).
-GROK_ARGS+=(--agent "${GROK_AGENT}")
-# Folder trust unlocks project plugins, hooks, and repo-local MCP.
-if grok --help 2>/dev/null | grep -q -- '--trust'; then
-  GROK_ARGS+=(--trust)
+# Do not inherit a harness GROK_AGENT; only honor an explicit --agent from the user.
+user_passed_agent=0
+for arg in "$@"; do
+  if [ "$arg" = "--agent" ]; then
+    user_passed_agent=1
+    break
+  fi
+done
+if [ "$user_passed_agent" -eq 0 ]; then
+  GROK_ARGS+=(--agent "${AGENT_FILE}")
 fi
+# Folder trust unlocks project plugins, hooks, and repo-local MCP.
+GROK_ARGS+=(--trust)
 
 exec grok "${GROK_ARGS[@]}" "$@"

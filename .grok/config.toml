@@ -8,3 +8,4 @@ enabled = ["cybergrok"]
 [mcp_servers.cybergrok]
 command = "node"
 args = ["mcp/launch.cjs"]
+# launch.cjs keeps the Grok process cwd as GROK_WORKSPACE_ROOT.

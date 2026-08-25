@@ -37,11 +37,8 @@ install_grok_agents() {
 link_plugin_tree() {
     local plugin="$ROOT/.grok/plugins/cybergrok"
     mkdir -p "$plugin"
-    if [ ! -f "$plugin/plugin.json" ]; then
-        cp "$ROOT/plugin.json" "$plugin/plugin.json"
-    fi
-    if [ ! -f "$plugin/.mcp.json" ]; then
-        cat > "$plugin/.mcp.json" <<'JSON'
+    cp "$ROOT/plugin.json" "$plugin/plugin.json"
+    cat > "$plugin/.mcp.json" <<'JSON'
 {
   "mcpServers": {
     "cybergrok": {
@@ -51,11 +48,35 @@ link_plugin_tree() {
   }
 }
 JSON
-    fi
     local name
     for name in agents commands hooks skills scripts mcp python AGENTS.md; do
         ln -sfn "../../../${name}" "$plugin/${name}"
     done
+}
+
+stage_plugin_package() {
+    # Slim tree for `grok plugin install` — no .git, venv, .env, or engagement data.
+    local stage="$ROOT/.grok/plugin-stage"
+    rm -rf "$stage"
+    mkdir -p "$stage"
+    cp "$ROOT/plugin.json" "$stage/plugin.json"
+    cat > "$stage/.mcp.json" <<'JSON'
+{
+  "mcpServers": {
+    "cybergrok": {
+      "command": "node",
+      "args": ["${GROK_PLUGIN_ROOT}/mcp/launch.cjs"]
+    }
+  }
+}
+JSON
+    local name
+    for name in agents commands hooks skills scripts mcp python AGENTS.md knowledge templates; do
+        if [ -e "$ROOT/$name" ]; then
+            cp -a "$ROOT/$name" "$stage/$name"
+        fi
+    done
+    printf '%s\n' "$stage"
 }
 
 echo ""
@@ -103,9 +124,10 @@ chmod +x "$ROOT/cybergrok" "$ROOT/env.sh" "$ROOT/scripts/cybergrok-mcp.sh" \
 
 if command -v grok >/dev/null 2>&1; then
     echo "Registering the Cybergrok plugin with Grok Build..."
-    if grok plugin install "$ROOT" --trust; then
+    STAGE="$(stage_plugin_package)"
+    if grok plugin install "$STAGE" --trust; then
         grok plugin enable cybergrok 2>/dev/null || true
-        echo "  plugin install --trust: ok"
+        echo "  plugin install --trust: ok (slim package, no .env/venv/.git)"
     else
         echo "  plugin install skipped — enable cybergrok in /plugins and run /hooks-trust"
     fi

@@ -23,6 +23,9 @@ build/
 # Node / TypeScript MCP
 mcp/node_modules/
 mcp/dist/
+
+# Slim grok plugin install staging (no .env/venv/.git)
+.grok/plugin-stage/
 node_modules/
 
 # Toolchain binaries (downloaded, not committed)

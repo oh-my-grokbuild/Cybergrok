@@ -33,8 +33,24 @@ Install-GrokAgents -Dest (Join-Path $GrokHome "agents") -Label "user"
 
 $plugin = Join-Path $Root ".grok\plugins\cybergrok"
 New-Item -ItemType Directory -Force -Path $plugin | Out-Null
-if (-not (Test-Path (Join-Path $plugin "plugin.json"))) {
-    Copy-Item (Join-Path $Root "plugin.json") (Join-Path $plugin "plugin.json")
+Copy-Item (Join-Path $Root "plugin.json") (Join-Path $plugin "plugin.json") -Force
+@'
+{
+  "mcpServers": {
+    "cybergrok": {
+      "command": "node",
+      "args": ["${GROK_PLUGIN_ROOT}/mcp/launch.cjs"]
+    }
+  }
+}
+'@ | Set-Content -Path (Join-Path $plugin ".mcp.json") -Encoding utf8
+foreach ($name in @("agents", "commands", "hooks", "skills", "scripts", "mcp", "python", "AGENTS.md")) {
+    $src = Join-Path $Root $name
+    $dest = Join-Path $plugin $name
+    if (Test-Path $src) {
+        if (Test-Path $dest) { Remove-Item $dest -Force -Recurse -ErrorAction SilentlyContinue }
+        New-Item -ItemType SymbolicLink -Path $dest -Target $src -Force | Out-Null
+    }
 }
 
 if (-not (Test-Path "$Root\venv")) {
@@ -60,7 +76,16 @@ if (Test-Path "$Root\tools\update_tools.ps1") {
 
 if (Get-Command grok -ErrorAction SilentlyContinue) {
     Write-Host "Registering the Cybergrok plugin with Grok Build..."
-    & grok plugin install $Root --trust
+    $stage = Join-Path $Root ".grok\plugin-stage"
+    if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+    New-Item -ItemType Directory -Force -Path $stage | Out-Null
+    Copy-Item (Join-Path $Root "plugin.json") (Join-Path $stage "plugin.json")
+    Copy-Item (Join-Path $plugin ".mcp.json") (Join-Path $stage ".mcp.json")
+    foreach ($name in @("agents", "commands", "hooks", "skills", "scripts", "mcp", "python", "AGENTS.md", "knowledge", "templates")) {
+        $src = Join-Path $Root $name
+        if (Test-Path $src) { Copy-Item $src (Join-Path $stage $name) -Recurse -Force }
+    }
+    & grok plugin install $stage --trust
     if ($LASTEXITCODE -eq 0) {
         & grok plugin enable cybergrok
     }

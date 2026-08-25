@@ -20,13 +20,10 @@ $AgentFile = Join-Path $ScriptDir ".grok\agents\cybergrok.md"
 if (-not (Test-Path $AgentFile)) {
     $AgentFile = Join-Path $ScriptDir "agents\cybergrok.md"
 }
-if (-not $env:GROK_AGENT) {
-    $env:GROK_AGENT = $AgentFile
-}
 
-$grokArgs = @("--agent", $env:GROK_AGENT)
-$help = & grok --help 2>$null | Out-String
-if ($help -match "--trust") {
-    $grokArgs += "--trust"
+$grokArgs = @()
+if ($args -notcontains "--agent") {
+    $grokArgs += @("--agent", $AgentFile)
 }
+$grokArgs += "--trust"
 & grok @grokArgs @args

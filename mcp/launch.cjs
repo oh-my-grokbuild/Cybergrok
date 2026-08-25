@@ -27,7 +27,11 @@ const root =
     ? envRoot
     : findRoot(path.join(__dirname, ".."));
 
+const workspace =
+  process.env.GROK_WORKSPACE_ROOT || process.env.CYBERGROK_WORKSPACE || process.cwd();
+
 process.env.CYBERGROK_ROOT = root;
+process.env.GROK_WORKSPACE_ROOT = workspace;
 const entry = path.join(root, "mcp", "dist", "index.js");
 if (!fs.existsSync(entry)) {
   process.stderr.write(
@@ -39,7 +43,7 @@ if (!fs.existsSync(entry)) {
 const child = spawn(process.execPath, [entry, ...process.argv.slice(2)], {
   stdio: "inherit",
   env: process.env,
-  cwd: root,
+  cwd: workspace,
 });
 child.on("exit", (code, signal) => {
   if (signal) {
