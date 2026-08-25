@@ -218,7 +218,7 @@ server.tool(
     depth: z.number().int().optional(),
     max_endpoints: z.number().int().optional(),
     timeout_seconds: z.number().optional(),
-    prefer_katana: z.boolean().optional(),
+    prefer_katana: z.boolean().optional().describe("Ignored. Katana is disabled; native crawl is always used."),
     format: z.enum(["markdown", "json"]).optional(),
   },
   async (args) => {

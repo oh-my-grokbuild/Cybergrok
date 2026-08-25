@@ -49,7 +49,7 @@ link_plugin_tree() {
 }
 JSON
     local name
-    for name in agents commands hooks skills scripts mcp python AGENTS.md; do
+    for name in agents commands hooks skills scripts mcp python AGENTS.md knowledge templates; do
         ln -sfn "../../../${name}" "$plugin/${name}"
     done
 }

@@ -44,7 +44,7 @@ Copy-Item (Join-Path $Root "plugin.json") (Join-Path $plugin "plugin.json") -For
   }
 }
 '@ | Set-Content -Path (Join-Path $plugin ".mcp.json") -Encoding utf8
-foreach ($name in @("agents", "commands", "hooks", "skills", "scripts", "mcp", "python", "AGENTS.md")) {
+foreach ($name in @("agents", "commands", "hooks", "skills", "scripts", "mcp", "python", "AGENTS.md", "knowledge", "templates")) {
     $src = Join-Path $Root $name
     $dest = Join-Path $plugin $name
     if (Test-Path $src) {

@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,13 +21,24 @@ export function findWorkspaceRoot(): string {
 
 export function findPython(): string {
   const root = findPluginRoot();
-  const venvUnix = join(root, "venv", "bin", "python3");
-  const venvWin = join(root, "venv", "Scripts", "python.exe");
-  if (existsSync(venvUnix)) {
-    return venvUnix;
+  const roots = [root];
+  try {
+    roots.push(join(realpathSync(join(root, "python")), ".."));
+  } catch {
+    /* plugin python dir may not be a symlink */
   }
-  if (existsSync(venvWin)) {
-    return venvWin;
+  if (process.env.CYBERGROK_ROOT) {
+    roots.push(process.env.CYBERGROK_ROOT);
+  }
+  for (const candidate of roots) {
+    const venvUnix = join(candidate, "venv", "bin", "python3");
+    const venvWin = join(candidate, "venv", "Scripts", "python.exe");
+    if (existsSync(venvUnix)) {
+      return venvUnix;
+    }
+    if (existsSync(venvWin)) {
+      return venvWin;
+    }
   }
   return process.platform === "win32" ? "python" : "python3";
 }
