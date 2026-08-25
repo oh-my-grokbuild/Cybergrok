@@ -6,19 +6,11 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
 
 from .paths import find_workspace_root
 from .scope import ScopeError, find_scope_config, validate_target
 
 NETWORK_TOOLS = {"curl", "httpx", "katana", "ffuf", "nuclei", "subfinder", "gau"}
-
-
-def _looks_url(raw: str) -> bool:
-    if raw.startswith(("http://", "https://")):
-        return True
-    parsed = urlparse(raw if "://" in raw else "http://" + raw)
-    return bool(parsed.hostname) and ("." in parsed.hostname or parsed.hostname == "localhost")
 
 
 def extract_targets(tool: str, argv: list[str]) -> list[str]:

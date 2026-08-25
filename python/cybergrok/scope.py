@@ -72,7 +72,7 @@ def parse_scope_file(path: Path) -> ScopeConfig:
         raise ScopeError("PyYAML is required to parse scope.yaml")
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except Exception as exc:
+    except (OSError, UnicodeError, yaml.YAMLError) as exc:
         raise ScopeError(f"Failed to parse '{path}': {exc}") from exc
     if not isinstance(data, dict):
         raise ScopeError(f"Invalid scope file '{path}': expected a mapping")
@@ -209,11 +209,47 @@ def _matches_host(host: str, ports: set[str], rule_host: str, *, host_only: bool
     return True
 
 
+def _matches_cidr_or_ip(host: str, ports: set[str], rule: str) -> bool | None:
+    if "/" in rule and "://" not in rule:
+        try:
+            net = ipaddress.ip_network(rule, strict=False)
+        except ValueError:
+            return None
+        if net.prefixlen == 0:
+            return False
+        try:
+            return ipaddress.ip_address(host) in net
+        except ValueError:
+            return False
+    try:
+        if ipaddress.ip_address(host).compressed == rule:
+            return bool(ports & {"80", "443"})
+    except ValueError:
+        return None
+    return None
+
+
+def _matches_url_rule(host: str, ports: set[str], path: str, rule: str) -> bool:
+    r_scheme, r_host, r_port, r_path = normalize_target(rule)
+    rule_ports = _effective_ports(r_scheme, r_port)
+    return (
+        _host_matches_name(host, r_host)
+        and bool(ports & rule_ports)
+        and _path_prefix_ok(path, r_path)
+    )
+
+
+def _matches_host_regex(host: str, rule: str) -> bool:
+    try:
+        return bool(re.compile(rule).fullmatch(host))
+    except re.error:
+        return False
+
+
 def _matches_rule(
     host: str,
     ports: set[str],
     path: str,
-    raw_target: str,  # noqa: ARG001 — kept for call-site compatibility
     rule: str,
     *,
     path_only: bool = False,
@@ -228,45 +264,24 @@ def _matches_rule(
         r_host, r_path = split
         return _matches_host(host, ports, r_host, host_only=True) and _path_prefix_ok(path, r_path)
 
-    if "/" in rule and "://" not in rule:
-        try:
-            net = ipaddress.ip_network(rule, strict=False)
-            if net.prefixlen == 0:
-                return False
-            ip = ipaddress.ip_address(host)
-            return ip in net
-        except ValueError:
-            pass
-
-    try:
-        if ipaddress.ip_address(host).compressed == rule:
-            return bool(ports & {"80", "443"})
-    except ValueError:
-        pass
+    cidr = _matches_cidr_or_ip(host, ports, rule)
+    if cidr is not None:
+        return cidr
 
     if "://" in rule:
         try:
-            r_scheme, r_host, r_port, r_path = normalize_target(rule)
-            rule_ports = _effective_ports(r_scheme, r_port)
-            if _host_matches_name(host, r_host) and (ports & rule_ports):
-                return _path_prefix_ok(path, r_path)
+            return _matches_url_rule(host, ports, path, rule)
         except ValueError:
             return False
 
     if rule.startswith("/"):
         return path_only and _path_prefix_ok(path, rule)
-
     if rule.startswith("*."):
         return _matches_host(host, ports, rule, host_only=True)
-
     if _matches_host(host, ports, rule, host_only=":" not in rule):
         return True
     if rule.startswith("^") or rule.endswith("$"):
-        try:
-            cre = re.compile(rule)
-            return bool(cre.fullmatch(host))
-        except re.error:
-            return False
+        return _matches_host_regex(host, rule)
     return False
 
 
@@ -291,7 +306,7 @@ def validate_target(raw_target: str, cfg: ScopeConfig | None) -> ValidationResul
         )
 
     for out_rule in cfg.out_of_scope:
-        if _matches_rule(host, ports, path, raw_target, out_rule, path_only=True):
+        if _matches_rule(host, ports, path, out_rule, path_only=True):
             return ValidationResult(
                 False,
                 raw_target,
@@ -320,11 +335,11 @@ def validate_target(raw_target: str, cfg: ScopeConfig | None) -> ValidationResul
         )
 
     for in_rule in host_rules:
-        if _matches_rule(host, ports, path, raw_target, in_rule, path_only=False):
+        if _matches_rule(host, ports, path, in_rule, path_only=False):
             # Optional extra path-only constraints
             path_rules = [r.strip() for r in cfg.in_scope if str(r).strip().startswith("/")]
             if path_rules and not any(
-                _matches_rule(host, ports, path, raw_target, r, path_only=True) for r in path_rules
+                _matches_rule(host, ports, path, r, path_only=True) for r in path_rules
             ):
                 continue
             return ValidationResult(

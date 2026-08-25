@@ -149,16 +149,13 @@ max-statements = 70
     "ARG001",  # unused fixtures
     "PLR2004", # magic values in assertions
     "SLF001",
-    "INP001",  # tests are not a package
     "PLC0415",
 ]
-"python/cybergrok/cli.py" = ["S603", "S607"]
-"python/cybergrok/wrap.py" = ["S603", "S607", "S606"]
-"python/cybergrok/probe.py" = ["S310", "S603", "S607", "S323", "SLF001"]
-"python/cybergrok/crawl.py" = ["S310", "S603", "S607"]
-"python/cybergrok/rpc.py" = ["S310", "C901", "PLR0911", "PLR0912", "PLR0915"]
-"python/cybergrok/scope.py" = ["C901", "PLR0911"]
-"python/cybergrok/search.py" = ["C901"]
+# Remaining bandit hits are the intended mechanism (urllib after netguard,
+# resolved httpx binary, wrap process replacement) — not unused APIs.
+"python/cybergrok/wrap.py" = ["S606"]
+"python/cybergrok/probe.py" = ["S310", "S603"]
+"python/cybergrok/crawl.py" = ["S310"]
 "tools/**/*.py" = [
     "T201", "INP001", "S603", "S607", "S310", "S102", "S103", "S110", "S605",
     "BLE001", "C901", "PLR", "PLW", "PTH", "PLC0415", "SIM105", "ARG001", "UP036", "W293",

@@ -21,6 +21,16 @@ from .netguard import UnsafeURL, assert_safe_url, prepare_safe_request
 
 TITLE_RE = re.compile(r"(?i)<title[^>]*>([^<]+)</title>")
 
+
+def _tls_context(insecure: bool) -> ssl.SSLContext:
+    if not insecure:
+        return ssl.create_default_context()
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return ctx
+
+
 SIGNATURES: list[dict[str, Any]] = [
     {
         "name": "Next.js",
@@ -263,7 +273,7 @@ def probe_native(
     fetch, host_hdr = prepare_safe_request(url, allow_private=allow_private)
     raw = url
     parsed = urlparse(raw)
-    ctx = ssl._create_unverified_context() if insecure_tls else ssl.create_default_context()
+    ctx = _tls_context(insecure_tls)
     handler = GuardedRedirectHandler(
         allow_private=allow_private, follow=follow_redirects, guard=guard
     )

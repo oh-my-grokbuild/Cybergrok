@@ -1,11 +1,9 @@
-"""Endpoint crawler (optional katana, native Python fallback)."""
+"""Endpoint crawler (native Python, scope-guarded)."""
 
 from __future__ import annotations
 
 import re
-import shutil
 import ssl
-import subprocess
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
@@ -41,29 +39,6 @@ class CrawlResult:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-
-
-def find_katana(tools_dir: Path | None = None) -> str | None:
-    if tools_dir:
-        for name in ("katana", "katana.exe"):
-            cand = Path(tools_dir) / "bin" / name
-            if cand.is_file():
-                return str(cand)
-    return shutil.which("katana")
-
-
-def _run_katana(url: str, depth: int, timeout: int, binary: str) -> list[str]:
-    try:
-        proc = subprocess.run(
-            [binary, "-u", url, "-d", str(depth), "-jc", "-silent", "-ct", f"{timeout}s"],
-            capture_output=True,
-            text=True,
-            timeout=timeout + 5,
-            check=False,
-        )
-    except OSError, subprocess.TimeoutExpired:
-        return []
-    return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
 
 
 def _resolve(base: str, ref: str) -> str:
@@ -167,9 +142,7 @@ def crawl_target(
     depth: int = 2,
     max_endpoints: int = 25,
     timeout: int = 30,
-    tools_dir: Path | None = None,  # noqa: ARG001 — kept for RPC/call-site compatibility
     output_dir: Path | None = None,
-    prefer_katana: bool = False,  # noqa: ARG001 — Katana is disabled; flag ignored
     user_agent: str = "Mozilla/5.0 (compatible; Cybergrok/1.0; Recon Crawler)",
     allow_private: bool = False,
     guard: Callable[[str], str] | None = None,
