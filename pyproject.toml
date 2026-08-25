@@ -17,12 +17,14 @@ dependencies = [
     "rich>=13.9.4",
     "markdown>=3.7",
     "jinja2>=3.1.5",
-    "ruff>=0.16.4",
-    "ty>=0.0.74",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.16.4",
+    "ty>=0.0.74",
+]
 
 [project.scripts]
 smart_pipe = "cybergrok.cli:main_smart_pipe"
@@ -36,3 +38,176 @@ where = ["python"]
 [tool.pytest.ini_options]
 testpaths = ["python/tests"]
 pythonpath = ["python"]
+
+# --- Ruff (lint + format) ---
+# First-party only. Vendored knowledge/, MCP, and venvs are out of scope.
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+src = ["python"]
+extend-exclude = [
+    "knowledge",
+    "venv",
+    ".venv",
+    "mcp",
+    ".grok",
+    "reports",
+    "recon",
+    "output",
+    "logs",
+    "targets",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+    "F",      # Pyflakes
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "B",      # bugbear
+    "A",      # builtins shadowing
+    "C4",     # comprehensions
+    "C90",    # mccabe complexity
+    "ASYNC",  # async pitfalls
+    "S",      # flake8-bandit
+    "BLE",    # blind except
+    "FA",     # future annotations
+    "T10",    # debugger
+    "ICN",    # import conventions
+    "LOG",    # logging
+    "G",      # logging format
+    "INP",    # implicit namespace packages
+    "PIE",    # flake8-pie
+    "PYI",    # typing stubs
+    "PT",     # pytest style
+    "Q",      # quotes
+    "RSE",    # raise
+    "RET",    # return
+    "SLF",    # private member access
+    "SLOT",   # slots
+    "SIM",    # simplify
+    "TID",    # tidy imports
+    "TC",     # type-checking blocks
+    "ARG",    # unused arguments
+    "PTH",    # pathlib
+    "PGH",    # pygrep-hooks
+    "PL",     # pylint
+    "TRY",    # tryceratops
+    "PERF",   # perflint
+    "FURB",   # refurb
+    "RUF",    # ruff
+]
+ignore = [
+    "E501",      # formatter owns line length
+    "D",         # no pydocstyle mandate
+    "COM812",    # conflicts with ruff format
+    "ISC001",    # conflicts with ruff format
+    "PLR0913",   # CLI/RPC handlers take many args by design
+    "TRY003",    # exception messages inline is fine for this codebase
+    "TRY300",    # try/else is optional style
+    "TC003",     # files use from __future__ import annotations
+    "N818",      # established names (UnsafeURL, ScopeError)
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 16
+
+[tool.ruff.lint.isort]
+known-first-party = ["cybergrok"]
+force-single-line = false
+combine-as-imports = true
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+[tool.ruff.lint.flake8-type-checking]
+strict = true
+
+[tool.ruff.lint.pylint]
+max-args = 10
+max-positional-args = 12
+max-branches = 16
+max-returns = 12
+max-statements = 70
+
+[tool.ruff.lint.per-file-ignores]
+"python/tests/**" = [
+    "S101",    # asserts are the test
+    "S105",    # dummy secrets in fixtures
+    "S106",
+    "S107",
+    "S108",    # dummy /tmp paths in assertions
+    "ARG001",  # unused fixtures
+    "PLR2004", # magic values in assertions
+    "SLF001",
+    "INP001",  # tests are not a package
+    "PLC0415",
+]
+"python/cybergrok/cli.py" = ["S603", "S607"]
+"python/cybergrok/wrap.py" = ["S603", "S607", "S606"]
+"python/cybergrok/probe.py" = ["S310", "S603", "S607", "S323", "SLF001"]
+"python/cybergrok/crawl.py" = ["S310", "S603", "S607"]
+"python/cybergrok/rpc.py" = ["S310", "C901", "PLR0911", "PLR0912", "PLR0915"]
+"python/cybergrok/scope.py" = ["C901", "PLR0911"]
+"python/cybergrok/search.py" = ["C901"]
+"tools/**/*.py" = [
+    "T201", "INP001", "S603", "S607", "S310", "S102", "S103", "S110", "S605",
+    "BLE001", "C901", "PLR", "PLW", "PTH", "PLC0415", "SIM105", "ARG001", "UP036", "W293",
+]
+"scripts/**/*.py" = [
+    "T201", "INP001", "S603", "S607", "BLE001", "PTH123", "ARG001", "C901", "PLR",
+]
+"examples/**/*.py" = ["T201", "INP001", "S104", "S310", "A002", "ARG001"]
+"**/__main__.py" = ["T201"]
+
+# --- ty (type checker) ---
+
+[tool.ty.environment]
+python-version = "3.14"
+python-platform = "all"
+root = ["python"]
+
+[tool.ty.src]
+include = ["python"]
+exclude = [
+    "knowledge",
+    "venv",
+    ".venv",
+    "mcp",
+    ".grok",
+    "reports",
+    "recon",
+    "output",
+    "logs",
+    "targets",
+    "tools",
+    "scripts",
+    "examples",
+]
+
+[tool.ty.analysis]
+strict-equality-semantics = true
+strict-generic-narrowing = true
+
+[tool.ty.rules]
+all = "error"
+
+[tool.ty.terminal]
+error-on-warning = true
+output-format = "full"
+
+[[tool.ty.overrides]]
+include = ["python/tests/**", "tools/**", "scripts/**", "examples/**"]
+
+[tool.ty.overrides.rules]
+possibly-unresolved-reference = "warn"
+unused-ignore-comment = "warn"

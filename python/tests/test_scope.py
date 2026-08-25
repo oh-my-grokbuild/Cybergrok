@@ -2,7 +2,13 @@ from pathlib import Path
 
 import pytest
 
-from cybergrok.scope import ScopeConfig, ScopeError, find_scope_config, parse_scope_file, validate_target
+from cybergrok.scope import (
+    ScopeConfig,
+    ScopeError,
+    find_scope_config,
+    parse_scope_file,
+    validate_target,
+)
 from cybergrok.wrap import check_targets, extract_targets
 
 

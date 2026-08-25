@@ -7,10 +7,11 @@ import shutil
 import ssl
 import subprocess
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any, TypedDict
 from urllib.error import HTTPError, URLError
-from collections.abc import Callable
 from urllib.parse import urljoin, urlparse
 from urllib.request import HTTPSHandler, Request, build_opener
 
@@ -24,16 +25,21 @@ API_RE = re.compile(
 )
 
 
+class _ScoredEndpoint(TypedDict):
+    score: int
+    text: str
+
+
 @dataclass
 class CrawlResult:
     target_url: str
     total_endpoints_found: int
-    top_endpoints: list[dict]
+    top_endpoints: list[_ScoredEndpoint]
     saved_file_path: str = ""
     engine_used: str = "native_python"
     duration_ms: int = 0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -55,7 +61,7 @@ def _run_katana(url: str, depth: int, timeout: int, binary: str) -> list[str]:
             timeout=timeout + 5,
             check=False,
         )
-    except (OSError, subprocess.TimeoutExpired):
+    except OSError, subprocess.TimeoutExpired:
         return []
     return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
 
@@ -71,12 +77,12 @@ def _fetch(opener, url: str, user_agent: str, timeout: int, allow_private: bool 
     req = Request(fetch, headers={"User-Agent": user_agent, "Host": host_hdr})
     try:
         with opener.open(req, timeout=min(5, timeout)) as resp:
-            return resp.read(512 * 1024).decode("utf-8", errors="ignore")
+            return str(resp.read(512 * 1024).decode("utf-8", errors="ignore"))
     except HTTPError as exc:
         if exc.fp:
-            return exc.read(512 * 1024).decode("utf-8", errors="ignore")
+            return str(exc.read(512 * 1024).decode("utf-8", errors="ignore"))
         return ""
-    except (URLError, TimeoutError, OSError):
+    except URLError, TimeoutError, OSError:
         return ""
 
 
@@ -89,10 +95,9 @@ def _default_port(scheme: str, port: int | None) -> int:
 def _same_origin(left: str, right: str) -> bool:
     a = urlparse(left)
     b = urlparse(right)
-    return (
-        (a.hostname or "").lower() == (b.hostname or "").lower()
-        and _default_port(a.scheme, a.port) == _default_port(b.scheme, b.port)
-    )
+    return (a.hostname or "").lower() == (b.hostname or "").lower() and _default_port(
+        a.scheme, a.port
+    ) == _default_port(b.scheme, b.port)
 
 
 def _check(url: str, allow_private: bool, guard: Callable[[str], str] | None) -> str:
@@ -127,31 +132,31 @@ def _native_crawl(
             if cur in visited or len(visited) >= max_pages:
                 continue
             try:
-                cur = _check(cur, allow_private, guard)
-            except (UnsafeURL, ValueError):
+                current = _check(cur, allow_private, guard)
+            except UnsafeURL, ValueError:
                 continue
-            visited.add(cur)
-            body = _fetch(opener, cur, user_agent, timeout, allow_private=allow_private)
+            visited.add(current)
+            body = _fetch(opener, current, user_agent, timeout, allow_private=allow_private)
             if not body:
                 continue
             for m in HREF_RE.finditer(body):
-                resolved = _resolve(cur, m.group(1).strip())
+                resolved = _resolve(current, m.group(1).strip())
                 if not resolved:
                     continue
                 try:
                     safe = _check(resolved, allow_private, guard)
-                except (UnsafeURL, ValueError):
+                except UnsafeURL, ValueError:
                     continue
                 endpoints.add(safe)
                 if _same_origin(safe, seed):
                     nxt.append(safe)
             for m in API_RE.finditer(body):
-                resolved = _resolve(cur, m.group(1).strip())
+                resolved = _resolve(current, m.group(1).strip())
                 if not resolved:
                     continue
                 try:
                     endpoints.add(_check(resolved, allow_private, guard))
-                except (UnsafeURL, ValueError):
+                except UnsafeURL, ValueError:
                     continue
         queue = nxt
     return list(endpoints)
@@ -162,9 +167,9 @@ def crawl_target(
     depth: int = 2,
     max_endpoints: int = 25,
     timeout: int = 30,
-    tools_dir: Path | None = None,
+    tools_dir: Path | None = None,  # noqa: ARG001 — kept for RPC/call-site compatibility
     output_dir: Path | None = None,
-    prefer_katana: bool = False,
+    prefer_katana: bool = False,  # noqa: ARG001 — Katana is disabled; flag ignored
     user_agent: str = "Mozilla/5.0 (compatible; Cybergrok/1.0; Recon Crawler)",
     allow_private: bool = False,
     guard: Callable[[str], str] | None = None,
@@ -172,22 +177,23 @@ def crawl_target(
     seed = _check(url, allow_private, guard)
     started = time.monotonic()
     engine = "native_python"
-    raw: list[str] = []
-    # Katana fetches before per-URL scope/netguard. Never invoke it.
-    del prefer_katana
+    # Katana fetches before per-URL scope/netguard. Always use the native crawler.
     raw = _native_crawl(seed, depth, timeout, user_agent, allow_private=allow_private, guard=guard)
 
     unique: dict[str, int] = {}
-    for ep in raw:
-        ep = ep.strip()
-        if not ep or ep in unique:
+    for raw_ep in raw:
+        endpoint = raw_ep.strip()
+        if not endpoint or endpoint in unique:
             continue
         try:
-            ep = _check(ep, allow_private, guard)
-        except (UnsafeURL, ValueError):
+            endpoint = _check(endpoint, allow_private, guard)
+        except UnsafeURL, ValueError:
             continue
-        unique[ep] = score_line(ep)
-    scored = sorted(({"score": s, "text": t} for t, s in unique.items()), key=lambda x: (-x["score"], len(x["text"])))
+        unique[endpoint] = score_line(endpoint)
+    scored: list[_ScoredEndpoint] = sorted(
+        ({"score": s, "text": t} for t, s in unique.items()),
+        key=lambda x: (-x["score"], len(x["text"])),
+    )
     saved = ""
     if output_dir:
         output_dir.mkdir(parents=True, exist_ok=True)

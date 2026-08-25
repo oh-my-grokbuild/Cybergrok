@@ -42,12 +42,18 @@ def normalize_http_url(raw: str) -> str:
     return target
 
 
-def _canonical_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
+def _canonical_ip(
+    ip: ipaddress.IPv4Address | ipaddress.IPv6Address,
+) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
     mapped = getattr(ip, "ipv4_mapped", None)
-    return mapped if mapped is not None else ip
+    if isinstance(mapped, ipaddress.IPv4Address):
+        return mapped
+    return ip
 
 
-def _is_blocked_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address, allow_private: bool) -> str | None:
+def _is_blocked_ip(
+    ip: ipaddress.IPv4Address | ipaddress.IPv6Address, allow_private: bool
+) -> str | None:
     ip = _canonical_ip(ip)
     if any(ip in net for net in IMDS_NETWORKS):
         return "blocked cloud metadata address"
@@ -67,10 +73,14 @@ def _pin_url(target: str, ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> 
     netloc = f"[{host}]" if ":" in host else host
     if parsed.port:
         netloc = f"{netloc}:{parsed.port}"
-    return urlunparse((parsed.scheme, netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
+    return urlunparse(
+        (parsed.scheme, netloc, parsed.path, parsed.params, parsed.query, parsed.fragment)
+    )
 
 
-def _checked_ips(host: str, port: int, allow_private: bool) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
+def _checked_ips(
+    host: str, port: int, allow_private: bool
+) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
     try:
         infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
     except OSError as exc:

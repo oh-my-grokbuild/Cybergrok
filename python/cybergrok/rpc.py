@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from typing import Any
 
 from . import crawl, probe, report, scope, search, secrets, skills
 from .netguard import UnsafeURL, assert_safe_url
@@ -12,14 +13,14 @@ from .paths import find_plugin_root, find_workspace_root, plugin_dirs, workspace
 from .scope import ScopeError
 
 
-def _plugin_root(args: dict) -> Path:
+def _plugin_root(args: dict[str, Any]) -> Path:
     raw = args.get("plugin_root")
     if raw:
         return Path(raw).expanduser().resolve()
     return find_plugin_root()
 
 
-def _workspace(args: dict) -> Path:
+def _workspace(args: dict[str, Any]) -> Path:
     pinned = os.environ.get("GROK_WORKSPACE_ROOT") or os.environ.get("CYBERGROK_WORKSPACE")
     if pinned:
         return Path(pinned).expanduser().resolve()
@@ -60,7 +61,7 @@ def _guard_url(raw: str, cfg: scope.ScopeConfig | None) -> str:
     return assert_safe_url(raw, allow_private=scope.allow_private_for_target(raw, cfg))
 
 
-def dispatch(op: str, args: dict | None = None) -> dict:
+def dispatch(op: str, args: dict[str, Any] | None = None) -> dict[str, Any]:
     args = args or {}
     plugin = _plugin_root(args)
     workspace = _workspace(args)
@@ -92,7 +93,9 @@ def dispatch(op: str, args: dict | None = None) -> dict:
         return {"total": len(items), "skills": [s.to_dict() for s in matched]}
 
     if op == "get_skill":
-        content = skills.get_skill(pdirs["skills"], args.get("skill_name", ""), args.get("section", ""))
+        content = skills.get_skill(
+            pdirs["skills"], args.get("skill_name", ""), args.get("section", "")
+        )
         if content is None:
             return {"error": f"Skill '{args.get('skill_name')}' not found"}
         return {"content": content}
@@ -110,7 +113,9 @@ def dispatch(op: str, args: dict | None = None) -> dict:
             except ValueError as exc:
                 return {"error": str(exc)}
             if not (_under(target, wdirs["recon"]) or _under(target, wdirs["reports"])):
-                return {"error": "scan_secrets path must be under the workspace recon/ or reports/ tree"}
+                return {
+                    "error": "scan_secrets path must be under the workspace recon/ or reports/ tree"
+                }
             if target.is_dir():
                 findings = secrets.scan_directory(target, confine_to=target)
             else:
@@ -125,7 +130,10 @@ def dispatch(op: str, args: dict | None = None) -> dict:
 
     if op == "validate_scope":
         try:
-            cfg, _path = scope.find_scope_config(workspace, _safe_slug(args.get("target_slug") or "target") if args.get("target_slug") else "")
+            cfg, _path = scope.find_scope_config(
+                workspace,
+                _safe_slug(args.get("target_slug") or "target") if args.get("target_slug") else "",
+            )
         except ScopeError as exc:
             return {"error": str(exc), "allowed": False}
         except ValueError:
@@ -135,7 +143,9 @@ def dispatch(op: str, args: dict | None = None) -> dict:
 
     if op == "http_probe":
         try:
-            slug = _safe_slug(args.get("target_slug") or "target") if args.get("target_slug") else ""
+            slug = (
+                _safe_slug(args.get("target_slug") or "target") if args.get("target_slug") else ""
+            )
             cfg, _ = scope.find_scope_config(workspace, slug)
         except ScopeError as exc:
             return {"error": str(exc)}
@@ -229,13 +239,16 @@ def dispatch(op: str, args: dict | None = None) -> dict:
             args.get("description", ""),
             args.get("reproduction_steps", ""),
             args.get("poc_script", ""),
-            args.get("remediation", "Implement strict authorization checks and validate user access permissions."),
+            args.get(
+                "remediation",
+                "Implement strict authorization checks and validate user access permissions.",
+            ),
         )
 
     return {"error": f"Unknown operation: {op}"}
 
 
-def run_rpc_payload(payload: dict) -> dict:
+def run_rpc_payload(payload: dict[str, Any]) -> dict[str, Any]:
     op = payload.get("op") or payload.get("operation") or ""
     try:
         result = dispatch(op, payload.get("args") or {})

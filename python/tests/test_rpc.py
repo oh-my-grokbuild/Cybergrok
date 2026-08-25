@@ -1,6 +1,7 @@
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from typing import override
 
 from cybergrok.paths import find_plugin_root
 from cybergrok.rpc import dispatch
@@ -41,7 +42,9 @@ def test_http_probe_absolute_slug_cannot_swap_scope(tmp_path: Path):
     (tmp_path / "scope.yaml").write_text("in_scope:\n  - lab.example\n", encoding="utf-8")
     evil = tmp_path.parent / "rpc_evil_scope"
     evil.mkdir(exist_ok=True)
-    (evil / "scope.yaml").write_text("in_scope:\n  - evil.example\nallow_ips: true\n", encoding="utf-8")
+    (evil / "scope.yaml").write_text(
+        "in_scope:\n  - evil.example\nallow_ips: true\n", encoding="utf-8"
+    )
     result = dispatch(
         "http_probe",
         {
@@ -82,24 +85,26 @@ def test_scan_secrets_allows_recon_tree(tmp_path: Path):
 
 
 def test_http_probe_blocks_out_of_scope_redirect(tmp_path: Path):
+    ports = {"secret": 0}
+
     class Handler(BaseHTTPRequestHandler):
-        def do_GET(self):  # noqa: N802
+        def do_GET(self) -> None:
             if self.path == "/go":
                 self.send_response(302)
-                self.send_header("Location", f"http://127.0.0.1:{self.server.secret_port}/secret")
+                self.send_header("Location", f"http://127.0.0.1:{ports['secret']}/secret")
                 self.end_headers()
                 return
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b"SECRET")
 
-        def log_message(self, *_args):  # noqa: ARG002
+        @override
+        def log_message(self, format: str, *args: object) -> None:
             return
 
     secret = HTTPServer(("127.0.0.1", 0), Handler)
     seed = HTTPServer(("127.0.0.1", 0), Handler)
-    seed.secret_port = secret.server_address[1]
-    secret.secret_port = secret.server_address[1]
+    ports["secret"] = int(secret.server_address[1])
     threads = [
         threading.Thread(target=seed.serve_forever, daemon=True),
         threading.Thread(target=secret.serve_forever, daemon=True),

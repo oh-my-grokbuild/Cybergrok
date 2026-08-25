@@ -7,9 +7,10 @@ import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any
 
 HEADING_RE = re.compile(r"^#{1,4}\s+(.+)$")
-CODE_BLOCK_RE = re.compile(r"```[a-zA-Z0-9_-]*\n.*?```", re.S)
+CODE_BLOCK_RE = re.compile(r"```[a-zA-Z0-9_-]*\n.*?```", re.DOTALL)
 
 KB_MAPPING = {
     "payloads": "PayloadsAllTheThings",
@@ -32,7 +33,7 @@ class Snippet:
     file: str
     source_kb: str
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -41,7 +42,9 @@ class Searcher:
         self.base_dir = Path(base_dir)
         self.root_dir = Path(root_dir)
 
-    def search(self, query: str, source: str = "all", limit: int = 3, max_chars: int = 1400) -> list[Snippet]:
+    def search(
+        self, query: str, source: str = "all", limit: int = 3, max_chars: int = 1400
+    ) -> list[Snippet]:
         search_path = self.base_dir
         mapped = KB_MAPPING.get(source, "")
         if mapped:
@@ -117,7 +120,9 @@ class Searcher:
         except ValueError:
             return "knowledge"
 
-    def _extract_snippets(self, file_path: Path, keywords: list[str], max_chars: int) -> list[Snippet]:
+    def _extract_snippets(
+        self, file_path: Path, keywords: list[str], max_chars: int
+    ) -> list[Snippet]:
         try:
             text = file_path.read_text(encoding="utf-8", errors="ignore")
         except OSError:
@@ -157,7 +162,9 @@ class Searcher:
                 score += 40
             if "```" in body:
                 score += 35
-            if any(t in lower for t in ("payload", "bypass", "exploit", "poc", "syntax", "example")):
+            if any(
+                t in lower for t in ("payload", "bypass", "exploit", "poc", "syntax", "example")
+            ):
                 score += 25
             if file_lower in {"summary.md", "_sidebar.md"}:
                 score -= 60
@@ -166,7 +173,9 @@ class Searcher:
             if len(body) > max_chars:
                 blocks = CODE_BLOCK_RE.findall(body)
                 if blocks and len(blocks[0]) < max_chars:
-                    trimmed = heading + "\n\n" + blocks[0] + "\n\n*(Truncated for context efficiency)*"
+                    trimmed = (
+                        heading + "\n\n" + blocks[0] + "\n\n*(Truncated for context efficiency)*"
+                    )
                 else:
                     trimmed = body[:max_chars].rstrip() + "\n\n*(Truncated for context efficiency)*"
 

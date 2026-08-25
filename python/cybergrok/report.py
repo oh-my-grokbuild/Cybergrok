@@ -7,6 +7,8 @@ import re
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any
+from urllib.parse import urlparse
 
 FRONTMATTER_RE = re.compile(r"(?s)^---\s*\n(.*?)\n---")
 FM_TITLE_RE = re.compile(r"(?m)^title:\s*['\"]?(.+?)['\"]?$")
@@ -14,12 +16,18 @@ FM_SEV_RE = re.compile(r"(?mi)^severity:\s*['\"]?([A-Za-z]+)['\"]?$")
 HEADING_TITLE_RE = re.compile(
     r"(?m)^#\s+(?:(?:Vulnerability Report|Finding|Vuln):\s*)?(?:\[[A-Z]+\]\s*[-:]?\s*)?(?:[0-9]+\.\s*)?(.+)$"
 )
-TABLE_SEV_RE = re.compile(r"(?i)\|\s*\*{0,2}(?:Severity|Severity Rating|Risk Level)\*{0,2}\s*\|\s*[`*]?([A-Za-z]+)")
-KV_SEV_RE = re.compile(r"(?i)\*{0,2}(?:Severity|Severity Rating|Risk Level)\*{0,2}\s*[:=]\s*[`*]*([A-Za-z]+)")
+TABLE_SEV_RE = re.compile(
+    r"(?i)\|\s*\*{0,2}(?:Severity|Severity Rating|Risk Level)\*{0,2}\s*\|\s*[`*]?([A-Za-z]+)"
+)
+KV_SEV_RE = re.compile(
+    r"(?i)\*{0,2}(?:Severity|Severity Rating|Risk Level)\*{0,2}\s*[:=]\s*[`*]*([A-Za-z]+)"
+)
 TABLE_CVSS_RE = re.compile(
     r"(?i)\|\s*\*{0,2}CVSS(?:\s*v?3(?:\.1)?)?(?:\s*Score)?\*{0,2}\s*\|\s*[`*]?([0-9.]+(?:\s*\([^)|\n]+\))?)"
 )
-KV_CVSS_RE = re.compile(r"(?i)CVSS(?:\s*v?3(?:\.1)?)?(?:\s*Score)?\s*[:=]\s*[`*]?([0-9.]+(?:\s*\([^)|\n]+\))?)")
+KV_CVSS_RE = re.compile(
+    r"(?i)CVSS(?:\s*v?3(?:\.1)?)?(?:\s*Score)?\s*[:=]\s*[`*]?([0-9.]+(?:\s*\([^)|\n]+\))?)"
+)
 TABLE_CWE_RE = re.compile(r"(?i)\|\s*\*{0,2}CWE\*{0,2}\s*\|\s*[`*]?((?:CWE-)?\d+[^|*`\n]*)")
 KV_CWE_RE = re.compile(r"(?i)CWE\s*[:=]\s*[`*]?((?:CWE-)?\d+[^|*`\n]*)")
 TABLE_EP_RE = re.compile(
@@ -52,8 +60,6 @@ def clean_value(val: str) -> str:
 def sanitize_slug(value: str) -> str:
     raw = (value or "").strip()
     if "://" in raw or raw.startswith("http"):
-        from urllib.parse import urlparse
-
         parsed = urlparse(raw if "://" in raw else "http://" + raw)
         host = (parsed.hostname or "").lower()
         port = f"_{parsed.port}" if parsed.port else ""
@@ -73,7 +79,7 @@ class FindingMeta:
     endpoint: str
     last_modified: str
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -88,7 +94,7 @@ class SummaryData:
     evidence_files: list[str] = field(default_factory=list)
     recon_notes: str | None = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "target": self.target,
             "scan_time": self.scan_time,
@@ -112,7 +118,11 @@ def parse_finding_file(file_path: Path) -> FindingMeta:
             title = tm.group(1).strip()
     if not title:
         hm = HEADING_TITLE_RE.search(content)
-        title = hm.group(1).strip() if hm else filename.removesuffix(".md").replace("_", " ").replace("-", " ")
+        title = (
+            hm.group(1).strip()
+            if hm
+            else filename.removesuffix(".md").replace("_", " ").replace("-", " ")
+        )
 
     severity = ""
     if fm:
@@ -142,14 +152,16 @@ def parse_finding_file(file_path: Path) -> FindingMeta:
     em = TABLE_EP_RE.search(content) or KV_EP_RE.search(content)
     endpoint = clean_value(em.group(1)) if em else "N/A"
     mtime = datetime.fromtimestamp(file_path.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
-    return FindingMeta(filename, f"findings/{filename}", title, severity, cvss, cwe, endpoint, mtime)
+    return FindingMeta(
+        filename, f"findings/{filename}", title, severity, cvss, cwe, endpoint, mtime
+    )
 
 
 def extract_custom_sections(existing: str) -> str:
     if not existing:
         return ""
     m = CUSTOM_SECTIONS_RE.search(existing)
-    return m.group(1).strip() if m else ""
+    return str(m.group(1)).strip() if m else ""
 
 
 def generate_summary_md(target_dir: Path, data: SummaryData, custom: str) -> None:
@@ -217,14 +229,22 @@ def aggregate_target(target_dir: Path) -> SummaryData:
     findings: list[FindingMeta] = []
     if findings_dir.is_dir():
         for p in findings_dir.iterdir():
-            if p.is_file() and p.suffix.lower() == ".md" and p.name.lower() not in {"summary.md", "readme.md"}:
+            if (
+                p.is_file()
+                and p.suffix.lower() == ".md"
+                and p.name.lower() not in {"summary.md", "readme.md"}
+            ):
                 try:
                     findings.append(parse_finding_file(p))
                 except OSError:
                     continue
     findings.sort(key=lambda f: (SEVERITY_WEIGHTS.get(f.severity, 9), f.title))
     pocs = sorted(p.name for p in pocs_dir.iterdir() if p.is_file()) if pocs_dir.is_dir() else []
-    evidence = sorted(p.name for p in evidence_dir.iterdir() if p.is_file()) if evidence_dir.is_dir() else []
+    evidence = (
+        sorted(p.name for p in evidence_dir.iterdir() if p.is_file())
+        if evidence_dir.is_dir()
+        else []
+    )
     sev = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFORMATIONAL": 0}
     for f in findings:
         if f.severity in sev:
@@ -240,8 +260,14 @@ def aggregate_target(target_dir: Path) -> SummaryData:
         evidence_files=evidence,
         recon_notes=recon,
     )
-    (target_dir / "metadata.json").write_text(json.dumps(data.to_dict(), indent=2) + "\n", encoding="utf-8")
-    existing = (target_dir / "SUMMARY.md").read_text(encoding="utf-8") if (target_dir / "SUMMARY.md").is_file() else ""
+    (target_dir / "metadata.json").write_text(
+        json.dumps(data.to_dict(), indent=2) + "\n", encoding="utf-8"
+    )
+    existing = (
+        (target_dir / "SUMMARY.md").read_text(encoding="utf-8")
+        if (target_dir / "SUMMARY.md").is_file()
+        else ""
+    )
     generate_summary_md(target_dir, data, extract_custom_sections(existing))
     return data
 
@@ -273,7 +299,7 @@ def record_finding(
     reproduction_steps: str,
     poc_script: str = "",
     remediation: str = "Implement strict authorization checks and validate user access permissions.",
-) -> dict:
+) -> dict[str, Any]:
     slug = sanitize_slug(target_slug)
     sev = severity.lower().strip()
     if sev not in {"critical", "high", "medium", "low", "info", "informational"}:
@@ -323,7 +349,12 @@ def record_finding(
     if poc_script:
         poc_name = f"poc_{vuln}.py"
         (pocs_dir / poc_name).write_text(poc_script, encoding="utf-8")
-        body += ["## Proof of Concept", "", f"Standalone script: [`pocs/{poc_name}`](../pocs/{poc_name})", ""]
+        body += [
+            "## Proof of Concept",
+            "",
+            f"Standalone script: [`pocs/{poc_name}`](../pocs/{poc_name})",
+            "",
+        ]
     body += ["## Remediation", "", remediation, ""]
     (findings_dir / finding_name).write_text("\n".join(body), encoding="utf-8")
     aggregate_target(target_dir)

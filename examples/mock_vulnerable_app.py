@@ -3,9 +3,9 @@ Cybergrok Mock Vulnerable Web Target
 Used for safe local validation of IDOR, information disclosure, and reporting pipelines.
 """
 
-from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
 import urllib.parse
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 DOCUMENTS = {
     "101": {"id": "101", "owner": "researcher_user_a", "title": "User A Public Notes", "content": "Public draft"},

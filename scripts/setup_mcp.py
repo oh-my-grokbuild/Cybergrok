@@ -59,7 +59,7 @@ def safe_read_json(file_path: Path):
     if not file_path.is_file():
         return None
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read().strip()
             return json.loads(content) if content else {}
     except Exception as e:

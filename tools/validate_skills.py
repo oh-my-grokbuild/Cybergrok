@@ -20,7 +20,7 @@ def validate_skills(skills_dir: Path) -> int:
     missing_desc = []
 
     for entry in sorted(skills_dir.iterdir()):
-        if entry.is_dir() and not entry.name.startswith('.'):
+        if entry.is_dir() and not entry.name.startswith("."):
             total += 1
             skill_file = entry / "SKILL.md"
             if not skill_file.exists():

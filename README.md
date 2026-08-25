@@ -122,6 +122,9 @@ reports/<slug>/
 ```bash
 python3 -m venv venv && source venv/bin/activate
 pip install -e ".[dev]"
+ruff check python tools scripts examples
+ruff format --check python/cybergrok python/tests
+ty check python/cybergrok python/tests
 PYTHONPATH=python pytest python/tests -q
 
 cd mcp && npm install && npm run build && npm run typecheck

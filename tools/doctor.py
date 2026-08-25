@@ -4,12 +4,12 @@ Cybergrok System Diagnostics & Health Check (Doctor)
 Cross-platform environment inspector and auto-repair utility.
 """
 
-import sys
+import argparse
 import os
 import platform
 import shutil
 import subprocess
-import argparse
+import sys
 from pathlib import Path
 
 GREEN = "\033[92m"
@@ -46,7 +46,7 @@ def print_status(status: str, msg: str, detail: str = ""):
 def check_python() -> tuple[int, int, int]:
     print_header("1. Python Environment")
     passed, warns, fails = 0, 0, 0
-    
+
     py_ver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     if sys.version_info >= (3, 10):
         print_status("ok", "Python Version", f"{py_ver} >= 3.10")
@@ -55,7 +55,7 @@ def check_python() -> tuple[int, int, int]:
         print_status("fail", "Python Version", f"{py_ver} (Requires 3.10+)")
         fails += 1
 
-    in_venv = hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix)
+    in_venv = hasattr(sys, "real_prefix") or (hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix)
     if in_venv:
         print_status("ok", "Virtual Environment", "Active")
         passed += 1
@@ -176,7 +176,7 @@ def check_config(root_dir: Path, auto_fix: bool = False) -> tuple[int, int, int]
 def check_tools(root_dir: Path, auto_fix: bool = False) -> tuple[int, int, int]:
     print_header("4. Security Toolchain Availability")
     passed, warns, fails = 0, 0, 0
-    
+
     extra = [root_dir / "tools" / "bin", root_dir / "venv" / "bin", root_dir / "venv" / "Scripts"]
     sep = ";" if sys.platform == "win32" else ":"
     prefix = sep.join(str(p) for p in extra if p.is_dir())

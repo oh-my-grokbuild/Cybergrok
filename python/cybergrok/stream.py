@@ -4,24 +4,59 @@ from __future__ import annotations
 
 import math
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable, TextIO
+from typing import TextIO
 
 ANSI_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+_MIN_ENTROPY_LEN = 16
+_HIGH_ENTROPY = 3.8
 UUID_RE = re.compile(r"(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 STATIC_SUFFIXES = (
-    ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".webp",
-    ".woff", ".woff2", ".ttf", ".eot", ".otf",
-    ".css", ".mp4", ".mp3", ".webm", ".avi", ".mov",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".svg",
+    ".ico",
+    ".webp",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".eot",
+    ".otf",
+    ".css",
+    ".mp4",
+    ".mp3",
+    ".webm",
+    ".avi",
+    ".mov",
 )
 CRITICAL_MARKERS = (
-    "[critical]", "[high]", "cve-", "rce", "sql injection",
-    "sqli", "idor", "ssrf", "xxe", "auth bypass",
+    "[critical]",
+    "[high]",
+    "cve-",
+    "rce",
+    "sql injection",
+    "sqli",
+    "idor",
+    "ssrf",
+    "xxe",
+    "auth bypass",
 )
 SECRET_MARKERS = (
-    ".env", ".git", "swagger", "openapi", "graphql",
-    "id_rsa", "password", "secret_key", "bearer ", "token=", "jwt",
+    ".env",
+    ".git",
+    "swagger",
+    "openapi",
+    "graphql",
+    "id_rsa",
+    "password",
+    "secret_key",
+    "bearer ",
+    "token=",
+    "jwt",
 )
 
 
@@ -44,7 +79,7 @@ def clean_line(line: str) -> str:
 
 
 def calculate_entropy(text: str) -> float:
-    if len(text) < 16:
+    if len(text) < _MIN_ENTROPY_LEN:
         return 0.0
     counts: dict[int, int] = {}
     for ch in text.encode("utf-8", errors="ignore"):
@@ -79,7 +114,12 @@ def score_line(line: str) -> int:
         score += 25
         if "/api/" in lower or "/v1/" in lower or "/v2/" in lower:
             score += 25
-    elif "[401]" in lower or "[403]" in lower or "401 unauthorized" in lower or "403 forbidden" in lower:
+    elif (
+        "[401]" in lower
+        or "[403]" in lower
+        or "401 unauthorized" in lower
+        or "403 forbidden" in lower
+    ):
         score += 20
         if "/admin" in lower or "/api/" in lower or "/internal" in lower:
             score += 25
@@ -90,12 +130,17 @@ def score_line(line: str) -> int:
         score += 20
     if UUID_RE.search(line):
         score += 20
-    if any(k in lower for k in ("key", "secret", "tok", "pass")) and calculate_entropy(line) > 3.8:
+    if (
+        any(k in lower for k in ("key", "secret", "tok", "pass"))
+        and calculate_entropy(line) > _HIGH_ENTROPY
+    ):
         score += 30
     return score
 
 
-def process_stream(lines: Iterable[str], stdout: TextIO, raw_out: TextIO, limit: int = 40) -> ProcessResult:
+def process_stream(
+    lines: Iterable[str], stdout: TextIO, raw_out: TextIO, limit: int = 40
+) -> ProcessResult:
     total_raw = 0
     scored: list[ScoredLine] = []
     seen: set[str] = set()
@@ -119,10 +164,11 @@ def process_stream(lines: Iterable[str], stdout: TextIO, raw_out: TextIO, limit:
         f"📊 [Smart Filter] {display} high-signal findings prioritized "
         f"(from {total_raw} total raw lines).\n\n"
     )
-    for item in scored[:display]:
-        stdout.write(item.text + "\n")
+    stdout.writelines(item.text + "\n" for item in scored[:display])
     if len(scored) > display:
-        stdout.write(f"\n... (+{len(scored) - display} more filtered entries archived in raw log)\n")
+        stdout.write(
+            f"\n... (+{len(scored) - display} more filtered entries archived in raw log)\n"
+        )
 
     return ProcessResult(
         total_raw=total_raw,

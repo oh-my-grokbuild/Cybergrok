@@ -5,14 +5,16 @@ Transforms structured finding markdown files and metadata.json into an executive
 Utilizes Playwright Chromium for pixel-perfect print layout and modern typography.
 """
 
+import argparse
+import json
 import os
 import re
 import sys
-import json
-import argparse
 from datetime import datetime
 from pathlib import Path
+
 import markdown
+
 
 def _reports_dir() -> Path:
     raw = os.environ.get("GROK_WORKSPACE_ROOT") or os.environ.get("CYBERGROK_WORKSPACE")
@@ -392,7 +394,7 @@ REPORT_HTML_TEMPLATE = """<!DOCTYPE html>
 def clean_markdown_for_html(content: str) -> str:
     """Pre-process markdown content for clean HTML conversion."""
     # Convert markdown tables, codeblocks and lists
-    md = markdown.Markdown(extensions=['extra', 'tables', 'fenced_code', 'nl2br'])
+    md = markdown.Markdown(extensions=["extra", "tables", "fenced_code", "nl2br"])
     return md.convert(content)
 
 def generate_report_for_target(target_dir: Path, output_pdf: bool = True) -> tuple:
@@ -400,7 +402,7 @@ def generate_report_for_target(target_dir: Path, output_pdf: bool = True) -> tup
     target_name = target_dir.name
     metadata_file = target_dir / "metadata.json"
     findings_dir = target_dir / "findings"
-    
+
     metadata = {}
     if metadata_file.exists():
         try:
@@ -423,7 +425,7 @@ def generate_report_for_target(target_dir: Path, output_pdf: bool = True) -> tup
             # Extract title & severity
             title_match = re.search(r"^#\s+(?:Vulnerability Report:\s*)?(.+)$", raw_text, re.MULTILINE)
             title = title_match.group(1).strip() if title_match else f_path.stem.replace("_", " ")
-            
+
             sev_match = re.search(r"(?:Severity|Severity Rating)\s*[:|]\s*\*?`?([A-Za-z]+)`?\*?", raw_text, re.IGNORECASE)
             severity = sev_match.group(1).upper() if sev_match else "INFORMATIONAL"
             if severity == "INFO":
@@ -477,7 +479,7 @@ def generate_report_for_target(target_dir: Path, output_pdf: bool = True) -> tup
             with sync_playwright() as p:
                 browser = p.chromium.launch(
                     headless=True,
-                    args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+                    args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
                 )
                 page = browser.new_page()
                 try:

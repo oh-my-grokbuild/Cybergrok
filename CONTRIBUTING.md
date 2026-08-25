@@ -53,6 +53,13 @@ git checkout -b fix/your-fix-name
 ```
 
 ### 3. Make and Verify Changes
+* Lint and typecheck first-party Python (`ruff` + `ty`):
+  ```bash
+  pip install -e ".[dev]"
+  ruff check python tools scripts examples
+  ruff format --check python/cybergrok python/tests
+  ty check python/cybergrok python/tests
+  ```
 * Run the Python engine tests:
   ```bash
   PYTHONPATH=python pytest python/tests -q

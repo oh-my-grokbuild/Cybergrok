@@ -7,12 +7,13 @@ import posixpath
 import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import Any
 from urllib.parse import unquote, urlparse
 
 try:
     import yaml
 except ImportError:  # pragma: no cover
-    yaml = None  # type: ignore
+    yaml = None  # type: ignore[assignment]
 
 
 class ScopeError(RuntimeError):
@@ -43,11 +44,11 @@ class ValidationResult:
     scope_found: bool = False
     error: str = ""
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
-def parse_scope_data(data: dict, source_path: str = "") -> ScopeConfig:
+def parse_scope_data(data: dict[str, Any], source_path: str = "") -> ScopeConfig:
     in_scope = list(data.get("in_scope") or [])
     # A bare "*" is ignored (fail-closed).
     for item in data.get("targets") or []:
@@ -71,7 +72,7 @@ def parse_scope_file(path: Path) -> ScopeConfig:
         raise ScopeError("PyYAML is required to parse scope.yaml")
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise ScopeError(f"Failed to parse '{path}': {exc}") from exc
     if not isinstance(data, dict):
         raise ScopeError(f"Invalid scope file '{path}': expected a mapping")
@@ -87,7 +88,9 @@ def _confine_under(path: Path, root: Path) -> Path | None:
     return resolved
 
 
-def find_scope_config(root_dir: Path, target_slug: str = "") -> tuple[ScopeConfig | None, Path | None]:
+def find_scope_config(
+    root_dir: Path, target_slug: str = ""
+) -> tuple[ScopeConfig | None, Path | None]:
     """Return workspace scope.yaml only.
 
     Per-target reports/<slug>/scope.yaml is not an allowlist — agents can write it.
@@ -117,7 +120,7 @@ def normalize_target(raw: str) -> tuple[str, str, str, str]:
 
 def _split_host_path_rule(rule: str) -> tuple[str, str] | None:
     """Parse scheme-less host[/path] (not CIDR, not path-only)."""
-    if "://" in rule or rule.startswith("/") or rule.startswith("*.") or rule.startswith("^"):
+    if "://" in rule or rule.startswith(("/", "*.", "^")):
         return None
     if "/" in rule:
         try:
@@ -210,7 +213,7 @@ def _matches_rule(
     host: str,
     ports: set[str],
     path: str,
-    raw_target: str,
+    raw_target: str,  # noqa: ARG001 — kept for call-site compatibility
     rule: str,
     *,
     path_only: bool = False,
@@ -271,7 +274,9 @@ def validate_target(raw_target: str, cfg: ScopeConfig | None) -> ValidationResul
     try:
         scheme, host, port, path = normalize_target(raw_target)
     except ValueError as exc:
-        return ValidationResult(False, raw_target, reason=f"Invalid target format: {exc}", scope_found=cfg is not None)
+        return ValidationResult(
+            False, raw_target, reason=f"Invalid target format: {exc}", scope_found=cfg is not None
+        )
     ports = _effective_ports(scheme, port)
 
     if cfg is None:
@@ -298,7 +303,11 @@ def validate_target(raw_target: str, cfg: ScopeConfig | None) -> ValidationResul
                 scope_found=True,
             )
 
-    host_rules = [r for r in cfg.in_scope if str(r).strip() and str(r).strip() != "*" and not str(r).strip().startswith("/")]
+    host_rules = [
+        r
+        for r in cfg.in_scope
+        if str(r).strip() and str(r).strip() != "*" and not str(r).strip().startswith("/")
+    ]
     if not host_rules:
         return ValidationResult(
             False,
@@ -314,7 +323,9 @@ def validate_target(raw_target: str, cfg: ScopeConfig | None) -> ValidationResul
         if _matches_rule(host, ports, path, raw_target, in_rule, path_only=False):
             # Optional extra path-only constraints
             path_rules = [r.strip() for r in cfg.in_scope if str(r).strip().startswith("/")]
-            if path_rules and not any(_matches_rule(host, ports, path, raw_target, r, path_only=True) for r in path_rules):
+            if path_rules and not any(
+                _matches_rule(host, ports, path, raw_target, r, path_only=True) for r in path_rules
+            ):
                 continue
             return ValidationResult(
                 True,

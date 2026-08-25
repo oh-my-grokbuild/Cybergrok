@@ -10,6 +10,7 @@ from pathlib import Path
 from . import report, search, secrets, stream
 from .paths import find_plugin_root, find_workspace_root
 from .rpc import loads_and_run
+from .wrap import main_wrap
 
 
 def _safe_cli_slug(raw: str) -> str:
@@ -55,7 +56,10 @@ def main_secret_scan(argv: list[str] | None = None) -> int:
     findings: list[secrets.Finding] = []
     if not args.paths:
         if sys.stdin.isatty():
-            print('Usage: echo "<content>" | secret_scan OR secret_scan <file1> <dir/> ...', file=sys.stderr)
+            print(
+                'Usage: echo "<content>" | secret_scan OR secret_scan <file1> <dir/> ...',
+                file=sys.stderr,
+            )
             return 2
         findings = secrets.scan_text(sys.stdin.read(), "<stdin>")
     else:
@@ -82,9 +86,21 @@ def main_search_knowledge(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     query = " ".join(args.query)
     root = find_plugin_root()
-    results = search.Searcher(root / "knowledge", root).search(query, args.source, args.limit, args.max_len)
+    results = search.Searcher(root / "knowledge", root).search(
+        query, args.source, args.limit, args.max_len
+    )
     if args.json:
-        print(json.dumps({"query": query, "source": args.source, "total_results": len(results), "results": [r.to_dict() for r in results]}, indent=2))
+        print(
+            json.dumps(
+                {
+                    "query": query,
+                    "source": args.source,
+                    "total_results": len(results),
+                    "results": [r.to_dict() for r in results],
+                },
+                indent=2,
+            )
+        )
         return 0
     if not results:
         print(f"🔍 [Knowledge Search] No relevant knowledge found for query: '{query}'")
@@ -140,7 +156,9 @@ def main_aggregate_reports(argv: list[str] | None = None) -> int:
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
-        print("Usage: python -m cybergrok <smart_pipe|secret_scan|search_knowledge|aggregate_reports|rpc|wrap> ...")
+        print(
+            "Usage: python -m cybergrok <smart_pipe|secret_scan|search_knowledge|aggregate_reports|rpc|wrap> ..."
+        )
         return 1
     cmd, rest = argv[0], argv[1:]
     if cmd == "smart_pipe":
@@ -159,8 +177,6 @@ def main(argv: list[str] | None = None) -> int:
         print(loads_and_run(raw))
         return 0
     if cmd == "wrap":
-        from .wrap import main_wrap
-
         return main_wrap(rest)
     print(f"Unknown command: {cmd}", file=sys.stderr)
     return 1
