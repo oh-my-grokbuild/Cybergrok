@@ -1,0 +1,27 @@
+**/.git
+**/.github
+**/.cache
+**/venv
+**/.venv
+**/__pycache__
+**/*.pyc
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.mp4
+logs/*.log
+output/*
+recon/*
+reports/*.md
+reports/*.py
+chrome/
+
+# Sensitive local configurations & credentials
+.env
+.env.*
+auth.json*
+*.pem
+*.key
+.grok/auth.json
+.grok/.env

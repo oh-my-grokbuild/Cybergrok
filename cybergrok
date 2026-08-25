@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Launch Grok Build as the Cybergrok agent with this plugin and toolchain on PATH.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export CYBERGROK_DIR="${SCRIPT_DIR}"
+export CYBERGROK_ROOT="${SCRIPT_DIR}"
+export PATH="${SCRIPT_DIR}/tools/bin:${SCRIPT_DIR}/bin:${SCRIPT_DIR}/venv/bin:${PATH}"
+umask 0002
+
+if [ -f "${SCRIPT_DIR}/.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "${SCRIPT_DIR}/.env"
+  set +a
+fi
+
+if [ -f "${SCRIPT_DIR}/venv/bin/activate" ]; then
+  # shellcheck disable=SC1091
+  source "${SCRIPT_DIR}/venv/bin/activate"
+fi
+
+if ! command -v grok >/dev/null 2>&1; then
+  echo "Error: Grok Build CLI ('grok') not found on PATH."
+  echo "Install Grok Build, then re-run: ./cybergrok"
+  echo "Plugin files are ready: grok plugin install \"${SCRIPT_DIR}\" --trust"
+  exit 1
+fi
+
+# Prefer an explicit plugin dir so skills/agents/hooks/MCP load even outside config.
+exec grok "$@"
