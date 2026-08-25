@@ -1,0 +1,6 @@
+# Project-local Grok Build config.
+# Treat this repository as the Cybergrok plugin when you launch grok from the checkout.
+
+[plugins]
+paths = ["."]
+enabled = ["cybergrok"]

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "cybergrok": {
+      "command": "${GROK_PLUGIN_ROOT}/scripts/cybergrok-mcp.sh",
+      "args": [],
+      "env": {
+        "CYBERGROK_ROOT": "${GROK_PLUGIN_ROOT}"
+      }
+    }
+  }
+}

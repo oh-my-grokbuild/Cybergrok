@@ -1,0 +1,24 @@
+{
+  "name": "cybergrok",
+  "description": "Cybergrok — autonomous offensive security plugin for Grok Build",
+  "owner": {
+    "name": "Grok Build Workforce"
+  },
+  "plugins": [
+    {
+      "name": "cybergrok",
+      "description": "Offensive security, bug bounty, and red-teaming agent: 200+ playbooks, native Go tools, MCP recon/report pipeline.",
+      "category": "security",
+      "version": "1.0.0",
+      "author": {
+        "name": "Grok Build Workforce"
+      },
+      "homepage": "https://github.com/search?q=cybergrok",
+      "keywords": ["cybergrok", "bug-bounty", "red-team", "recon"],
+      "source": {
+        "type": "local",
+        "path": "."
+      }
+    }
+  ]
+}
