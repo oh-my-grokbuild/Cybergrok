@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cybergrok"
+version = "1.0.0"
+description = "Autonomous offensive security plugin for Grok Build (Python core + TypeScript MCP)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Grok Build Workforce" }]
+dependencies = [
+    "pyyaml>=6.0.2",
+    "requests>=2.32.3",
+    "playwright>=1.49.0",
+    "rich>=13.9.4",
+    "markdown>=3.7",
+    "jinja2>=3.1.5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+smart_pipe = "cybergrok.cli:main_smart_pipe"
+secret_scan = "cybergrok.cli:main_secret_scan"
+search_knowledge = "cybergrok.cli:main_search_knowledge"
+aggregate_reports = "cybergrok.cli:main_aggregate_reports"
+
+[tool.setuptools.packages.find]
+where = ["python"]
+
+[tool.pytest.ini_options]
+testpaths = ["python/tests"]
+pythonpath = ["python"]
