@@ -10,6 +10,7 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from urllib.error import HTTPError, URLError
+from collections.abc import Callable
 from urllib.parse import urljoin, urlparse
 from urllib.request import HTTPSHandler, Request, build_opener
 
@@ -78,11 +79,41 @@ def _fetch(opener, url: str, user_agent: str, timeout: int) -> str:
         return ""
 
 
-def _native_crawl(url: str, depth: int, timeout: int, user_agent: str, allow_private: bool) -> list[str]:
-    seed = assert_safe_url(url, allow_private=allow_private)
-    parsed = urlparse(seed)
+def _default_port(scheme: str, port: int | None) -> int:
+    if port:
+        return port
+    return 443 if scheme == "https" else 80
+
+
+def _same_origin(left: str, right: str) -> bool:
+    a = urlparse(left)
+    b = urlparse(right)
+    return (
+        (a.hostname or "").lower() == (b.hostname or "").lower()
+        and _default_port(a.scheme, a.port) == _default_port(b.scheme, b.port)
+    )
+
+
+def _check(url: str, allow_private: bool, guard: Callable[[str], str] | None) -> str:
+    if guard:
+        return guard(url)
+    return assert_safe_url(url, allow_private=allow_private)
+
+
+def _native_crawl(
+    url: str,
+    depth: int,
+    timeout: int,
+    user_agent: str,
+    allow_private: bool,
+    guard: Callable[[str], str] | None = None,
+) -> list[str]:
+    seed = _check(url, allow_private, guard)
     ctx = ssl.create_default_context()
-    opener = build_opener(GuardedRedirectHandler(allow_private=allow_private, follow=False), HTTPSHandler(context=ctx))
+    opener = build_opener(
+        GuardedRedirectHandler(allow_private=allow_private, follow=False, guard=guard),
+        HTTPSHandler(context=ctx),
+    )
     visited: set[str] = set()
     endpoints: set[str] = set()
     queue = [seed]
@@ -93,8 +124,8 @@ def _native_crawl(url: str, depth: int, timeout: int, user_agent: str, allow_pri
             if cur in visited or len(visited) >= max_pages:
                 continue
             try:
-                assert_safe_url(cur, allow_private=allow_private)
-            except UnsafeURL:
+                cur = _check(cur, allow_private, guard)
+            except (UnsafeURL, ValueError):
                 continue
             visited.add(cur)
             body = _fetch(opener, cur, user_agent, timeout)
@@ -105,19 +136,19 @@ def _native_crawl(url: str, depth: int, timeout: int, user_agent: str, allow_pri
                 if not resolved:
                     continue
                 try:
-                    safe = assert_safe_url(resolved, allow_private=allow_private)
-                except UnsafeURL:
+                    safe = _check(resolved, allow_private, guard)
+                except (UnsafeURL, ValueError):
                     continue
                 endpoints.add(safe)
-                if urlparse(safe).hostname == parsed.hostname:
+                if _same_origin(safe, seed):
                     nxt.append(safe)
             for m in API_RE.finditer(body):
                 resolved = _resolve(cur, m.group(1).strip())
                 if not resolved:
                     continue
                 try:
-                    endpoints.add(assert_safe_url(resolved, allow_private=allow_private))
-                except UnsafeURL:
+                    endpoints.add(_check(resolved, allow_private, guard))
+                except (UnsafeURL, ValueError):
                     continue
         queue = nxt
     return list(endpoints)
@@ -130,22 +161,24 @@ def crawl_target(
     timeout: int = 30,
     tools_dir: Path | None = None,
     output_dir: Path | None = None,
-    prefer_katana: bool = True,
+    prefer_katana: bool = False,
     user_agent: str = "Mozilla/5.0 (compatible; Cybergrok/1.0; Recon Crawler)",
     allow_private: bool = False,
+    guard: Callable[[str], str] | None = None,
 ) -> CrawlResult:
-    assert_safe_url(url, allow_private=allow_private)
+    seed = _check(url, allow_private, guard)
     started = time.monotonic()
     engine = "native_python"
     raw: list[str] = []
+    # Katana fetches before we can apply per-URL scope. Keep it opt-in only.
     if prefer_katana:
         binary = find_katana(tools_dir)
         if binary:
-            raw = _run_katana(url, depth, timeout, binary)
+            raw = _run_katana(seed, depth, timeout, binary)
             if raw:
                 engine = "katana"
     if not raw:
-        raw = _native_crawl(url, depth, timeout, user_agent, allow_private=allow_private)
+        raw = _native_crawl(seed, depth, timeout, user_agent, allow_private=allow_private, guard=guard)
 
     unique: dict[str, int] = {}
     for ep in raw:
@@ -153,8 +186,8 @@ def crawl_target(
         if not ep or ep in unique:
             continue
         try:
-            ep = assert_safe_url(ep, allow_private=allow_private)
-        except UnsafeURL:
+            ep = _check(ep, allow_private, guard)
+        except (UnsafeURL, ValueError):
             continue
         unique[ep] = score_line(ep)
     scored = sorted(({"score": s, "text": t} for t, s in unique.items()), key=lambda x: (-x["score"], len(x["text"])))

@@ -12,7 +12,14 @@ IMDS_HOSTS = {
     "metadata.google.internal",
     "metadata.google.com",
     "instance-data",
+    "100.100.100.200",
+    "fd00:ec2::254",
 }
+IMDS_NETWORKS = (
+    ipaddress.ip_network("169.254.169.254/32"),
+    ipaddress.ip_network("100.100.100.200/32"),
+    ipaddress.ip_network("fd00:ec2::254/128"),
+)
 
 
 class UnsafeURL(ValueError):
@@ -33,11 +40,17 @@ def normalize_http_url(raw: str) -> str:
     return target
 
 
+def _canonical_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
+    mapped = getattr(ip, "ipv4_mapped", None)
+    return mapped if mapped is not None else ip
+
+
 def _is_blocked_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address, allow_private: bool) -> str | None:
+    ip = _canonical_ip(ip)
+    if any(ip in net for net in IMDS_NETWORKS):
+        return "blocked cloud metadata address"
     if ip.is_multicast or ip.is_unspecified or ip.is_reserved:
         return f"blocked address {ip}"
-    if str(ip) in {"169.254.169.254", "::ffff:169.254.169.254"}:
-        return "blocked cloud metadata address"
     if ip.is_link_local:
         return f"blocked link-local address {ip}"
     if not allow_private and (ip.is_private or ip.is_loopback):
@@ -51,18 +64,22 @@ def assert_safe_url(raw: str, *, allow_private: bool = False) -> str:
     host = (parsed.hostname or "").lower()
     if host in IMDS_HOSTS:
         raise UnsafeURL(f"blocked metadata host '{host}'")
+    literal_ip: ipaddress.IPv4Address | ipaddress.IPv6Address | None
     try:
-        ip = ipaddress.ip_address(host)
-        reason = _is_blocked_ip(ip, allow_private)
+        literal_ip = ipaddress.ip_address(host)
+    except ValueError:
+        literal_ip = None
+    if literal_ip is not None:
+        reason = _is_blocked_ip(literal_ip, allow_private)
         if reason:
             raise UnsafeURL(reason)
         return target
-    except ValueError:
-        pass
     try:
         infos = socket.getaddrinfo(host, parsed.port or (443 if parsed.scheme == "https" else 80), type=socket.SOCK_STREAM)
     except OSError as exc:
         raise UnsafeURL(f"DNS resolution failed for '{host}': {exc}") from exc
+    if not infos:
+        raise UnsafeURL(f"DNS resolution returned no addresses for '{host}'")
     for info in infos:
         sockaddr = info[4]
         try:

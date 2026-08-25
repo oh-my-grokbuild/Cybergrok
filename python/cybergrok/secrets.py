@@ -42,7 +42,7 @@ _RAW_PATTERNS: list[tuple[str, str, str, str]] = [
     ("RSA_PRIVKEY", SEV_CRITICAL, "private_key", r"-----BEGIN RSA PRIVATE KEY-----"),
     ("EC_PRIVKEY", SEV_CRITICAL, "private_key", r"-----BEGIN EC PRIVATE KEY-----"),
     ("OPENSSH_PRIVKEY", SEV_CRITICAL, "private_key", r"-----BEGIN OPENSSH PRIVATE KEY-----"),
-    ("GENERIC_PRIVKEY", SEV_CRITICAL, "private_key", r"-----BEGIN (DSA |PGP |)PRIVATE KEY-----"),
+    ("GENERIC_PRIVKEY", SEV_CRITICAL, "private_key", r"-----BEGIN (?:DSA |PGP |)PRIVATE KEY-----"),
     ("GENERIC_API_KEY", SEV_MEDIUM, "generic", r"(?i)(?:api[_\-]?key|apikey|api_secret|access_token|secret[_\-]?token)['\"\s:=]+[\"']([A-Za-z0-9+/=_\-]{24,})[\"']"),
     ("ANTHROPIC_API", SEV_CRITICAL, "ai_api", r"\bsk-ant-(?:api03|admin01)-[A-Za-z0-9_\-]{93,}\b"),
     ("OPENAI_LEGACY", SEV_CRITICAL, "ai_api", r"\bsk-[A-Za-z0-9]{20}T3BlbkFJ[A-Za-z0-9]{20}\b"),

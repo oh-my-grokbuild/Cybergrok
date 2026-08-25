@@ -1,3 +1,5 @@
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 from cybergrok.paths import find_plugin_root
@@ -32,3 +34,101 @@ def test_slug_escape_stays_in_workspace(tmp_path: Path):
 def test_unknown_op():
     result = dispatch("nope", {})
     assert "error" in result
+
+
+def test_http_probe_absolute_slug_cannot_swap_scope(tmp_path: Path):
+    root = find_plugin_root()
+    (tmp_path / "scope.yaml").write_text("in_scope:\n  - lab.example\n", encoding="utf-8")
+    evil = tmp_path.parent / "rpc_evil_scope"
+    evil.mkdir(exist_ok=True)
+    (evil / "scope.yaml").write_text("in_scope:\n  - evil.example\nallow_ips: true\n", encoding="utf-8")
+    result = dispatch(
+        "http_probe",
+        {
+            "target_url": "https://evil.example/",
+            "target_slug": str(evil),
+            "workspace": str(tmp_path),
+            "plugin_root": str(root),
+            "prefer_httpx": False,
+            "timeout_seconds": 2,
+        },
+    )
+    assert "error" in result
+    assert "Scope Guard" in result["error"]
+
+
+def test_scan_secrets_rejects_workspace_root(tmp_path: Path):
+    root = find_plugin_root()
+    (tmp_path / ".env").write_text("ghp_" + ("a" * 36) + "\n", encoding="utf-8")
+    result = dispatch(
+        "scan_secrets",
+        {"path": ".env", "workspace": str(tmp_path), "plugin_root": str(root)},
+    )
+    assert "error" in result
+    assert "recon" in result["error"]
+
+
+def test_scan_secrets_allows_recon_tree(tmp_path: Path):
+    root = find_plugin_root()
+    recon = tmp_path / "recon" / "lab"
+    recon.mkdir(parents=True)
+    (recon / "js.txt").write_text("ghp_" + ("a" * 36) + "\n", encoding="utf-8")
+    result = dispatch(
+        "scan_secrets",
+        {"path": "recon/lab/js.txt", "workspace": str(tmp_path), "plugin_root": str(root)},
+    )
+    assert "error" not in result
+    assert result["reported"] >= 1
+
+
+def test_http_probe_blocks_out_of_scope_redirect(tmp_path: Path):
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            if self.path == "/go":
+                self.send_response(302)
+                self.send_header("Location", f"http://127.0.0.1:{self.server.secret_port}/secret")
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"SECRET")
+
+        def log_message(self, *_args):  # noqa: ARG002
+            return
+
+    secret = HTTPServer(("127.0.0.1", 0), Handler)
+    seed = HTTPServer(("127.0.0.1", 0), Handler)
+    seed.secret_port = secret.server_address[1]
+    secret.secret_port = secret.server_address[1]
+    threads = [
+        threading.Thread(target=seed.serve_forever, daemon=True),
+        threading.Thread(target=secret.serve_forever, daemon=True),
+    ]
+    for t in threads:
+        t.start()
+    try:
+        seed_port = seed.server_address[1]
+        secret_port = secret.server_address[1]
+        (tmp_path / "scope.yaml").write_text(
+            f"in_scope:\n  - 127.0.0.1:{seed_port}\n",
+            encoding="utf-8",
+        )
+        result = dispatch(
+            "http_probe",
+            {
+                "target_url": f"http://127.0.0.1:{seed_port}/go",
+                "workspace": str(tmp_path),
+                "plugin_root": str(find_plugin_root()),
+                "follow_redirects": True,
+                "prefer_httpx": False,
+                "timeout_seconds": 3,
+            },
+        )
+        err = result.get("error") or ""
+        assert err
+        assert "SECRET" not in str(result)
+        assert "does not match" in err or "Scope Guard" in err or "blocked" in err.lower()
+        assert secret_port != seed_port
+    finally:
+        seed.shutdown()
+        secret.shutdown()

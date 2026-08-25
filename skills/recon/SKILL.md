@@ -1,5 +1,5 @@
 ---
-name: recon
+name: recon-playbook
 description: Orchestrates scoped subdomain enumeration, DNS resolution, and active web probing for bug bounty targets.
 user-invocable: false
 disable-model-invocation: true

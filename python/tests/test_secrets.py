@@ -17,6 +17,13 @@ def test_multi_group_captures_secret_not_filler():
     assert secret in loose[0].match
 
 
+def test_dsa_private_key_keeps_full_header():
+    findings = scan_text("-----BEGIN DSA PRIVATE KEY-----\n", "mem")
+    dsa = [f for f in findings if f.pattern == "GENERIC_PRIVKEY"]
+    assert dsa
+    assert "BEGIN DSA PRIVATE KEY" in dsa[0].match
+
+
 def test_severity_filter_and_mask():
     findings = scan_text("sk_test_" + ("a" * 24), "mem")
     assert findings

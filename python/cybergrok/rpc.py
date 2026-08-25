@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from . import crawl, probe, report, scope, search, secrets, skills
-from .netguard import UnsafeURL
+from .netguard import UnsafeURL, assert_safe_url
 from .paths import find_plugin_root, find_workspace_root, plugin_dirs, workspace_dirs
 from .scope import ScopeError
 
@@ -39,6 +39,21 @@ def _confine(path: Path, root: Path) -> Path:
     except ValueError as exc:
         raise ValueError(f"path '{path}' is outside the workspace") from exc
     return resolved
+
+
+def _under(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def _guard_url(raw: str, cfg: scope.ScopeConfig | None) -> str:
+    val = scope.validate_target(raw, cfg)
+    if not val.allowed:
+        raise UnsafeURL(val.reason or "out of scope")
+    return assert_safe_url(raw, allow_private=scope.allow_private_for_target(raw, cfg))
 
 
 def dispatch(op: str, args: dict | None = None) -> dict:
@@ -90,8 +105,7 @@ def dispatch(op: str, args: dict | None = None) -> dict:
                 target = _confine(target, workspace)
             except ValueError as exc:
                 return {"error": str(exc)}
-            allowed = {wdirs["recon"].resolve(), wdirs["reports"].resolve(), workspace.resolve()}
-            if not any(str(target).startswith(str(a)) for a in allowed):
+            if not (_under(target, wdirs["recon"]) or _under(target, wdirs["reports"])):
                 return {"error": "scan_secrets path must be under the workspace recon/ or reports/ tree"}
             findings = secrets.scan_directory(target) if target.is_dir() else secrets.scan_file(target)
         else:
@@ -114,26 +128,32 @@ def dispatch(op: str, args: dict | None = None) -> dict:
 
     if op == "http_probe":
         try:
-            cfg, _ = scope.find_scope_config(workspace, args.get("target_slug") or "")
+            slug = _safe_slug(args.get("target_slug") or "target") if args.get("target_slug") else ""
+            cfg, _ = scope.find_scope_config(workspace, slug)
         except ScopeError as exc:
+            return {"error": str(exc)}
+        except ValueError as exc:
             return {"error": str(exc)}
         val = scope.validate_target(args.get("target_url", ""), cfg)
         if not val.allowed:
             return {"error": f"Scope Guard Violation: {val.reason}"}
-        allow_private = bool(cfg.allow_ips) if cfg else False
+        allow_private = scope.allow_private_for_target(args.get("target_url", ""), cfg)
         try:
             result = probe.probe_target(
                 args.get("target_url", ""),
                 timeout=int(args.get("timeout_seconds") or 10),
                 follow_redirects=bool(args.get("follow_redirects")),
                 tools_dir=pdirs["tools"],
-                prefer_httpx=args.get("prefer_httpx", True),
+                prefer_httpx=bool(args.get("prefer_httpx")),
                 allow_private=allow_private,
+                guard=lambda url: _guard_url(url, cfg),
             )
         except (UnsafeURL, RuntimeError) as exc:
             return {"error": str(exc)}
-        if result.url:
-            again = scope.validate_target(result.url, cfg)
+        for hop in (result.url, result.redirect_url):
+            if not hop:
+                continue
+            again = scope.validate_target(hop, cfg)
             if not again.allowed:
                 return {"error": f"Scope Guard Violation after redirect: {again.reason}"}
         return result.to_dict()
@@ -151,7 +171,7 @@ def dispatch(op: str, args: dict | None = None) -> dict:
         val = scope.validate_target(target_url, cfg)
         if not val.allowed:
             return {"error": f"Scope Guard Violation: {val.reason}"}
-        allow_private = bool(cfg.allow_ips) if cfg else False
+        allow_private = scope.allow_private_for_target(target_url, cfg)
         recon_dir = _confine(wdirs["recon"] / slug, workspace)
         try:
             result = crawl.crawl_target(
@@ -161,8 +181,9 @@ def dispatch(op: str, args: dict | None = None) -> dict:
                 timeout=int(args.get("timeout_seconds") or 30),
                 tools_dir=pdirs["tools"],
                 output_dir=recon_dir,
-                prefer_katana=args.get("prefer_katana", True),
+                prefer_katana=bool(args.get("prefer_katana")),
                 allow_private=allow_private,
+                guard=lambda url: _guard_url(url, cfg),
             )
         except (UnsafeURL, RuntimeError) as exc:
             return {"error": str(exc)}

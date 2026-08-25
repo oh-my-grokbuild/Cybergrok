@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import ipaddress
+import posixpath
 import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 try:
     import yaml
@@ -48,7 +49,7 @@ class ValidationResult:
 
 def parse_scope_data(data: dict, source_path: str = "") -> ScopeConfig:
     in_scope = list(data.get("in_scope") or [])
-    # Legacy Cybermes key. A bare "*" is ignored (fail-closed).
+    # A bare "*" is ignored (fail-closed).
     for item in data.get("targets") or []:
         if str(item).strip() == "*":
             continue
@@ -77,26 +78,37 @@ def parse_scope_file(path: Path) -> ScopeConfig:
     return parse_scope_data(data, str(path))
 
 
+def _confine_under(path: Path, root: Path) -> Path | None:
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(root.resolve())
+    except ValueError:
+        return None
+    return resolved
+
+
 def find_scope_config(root_dir: Path, target_slug: str = "") -> tuple[ScopeConfig | None, Path | None]:
-    """Return (config, path). Raises ScopeError if a candidate exists but is unreadable."""
+    """Return (config, path). Raises ScopeError if a candidate exists but is unreadable.
+
+    The first existing candidate is the policy. A broken per-target file does
+    not fall through to the workspace file.
+    """
+    root = Path(root_dir).resolve()
     candidates: list[Path] = []
-    if target_slug:
-        candidates += [
-            root_dir / "reports" / target_slug / "scope.yaml",
-            root_dir / "reports" / target_slug / "scope.yml",
-        ]
-    candidates += [root_dir / "scope.yaml", root_dir / "scope.yml"]
-    last_error: ScopeError | None = None
+    slug = (target_slug or "").strip()
+    if slug:
+        cleaned = re.sub(r"[^a-z0-9]+", "_", slug.lower()).strip("_")
+        if cleaned and cleaned not in {".", ".."} and "/" not in cleaned and "\\" not in cleaned:
+            reports = root / "reports"
+            for name in ("scope.yaml", "scope.yml"):
+                confined = _confine_under(reports / cleaned / name, reports)
+                if confined is not None:
+                    candidates.append(confined)
+    candidates += [root / "scope.yaml", root / "scope.yml"]
     for path in candidates:
         if not path.is_file():
             continue
-        try:
-            return parse_scope_file(path), path
-        except ScopeError as exc:
-            last_error = exc
-            continue
-    if last_error:
-        raise last_error
+        return parse_scope_file(path), path
     return None, None
 
 
@@ -128,6 +140,47 @@ def _split_host_path_rule(rule: str) -> tuple[str, str] | None:
     return None
 
 
+def _normalize_path(path: str) -> str:
+    raw = unquote(path or "/")
+    if not raw.startswith("/"):
+        raw = "/" + raw
+    normalized = posixpath.normpath(raw)
+    if not normalized.startswith("/"):
+        normalized = "/" + normalized
+    if raw.endswith("/") and normalized != "/":
+        normalized += "/"
+    return normalized
+
+
+def _path_prefix_ok(path: str, rule_path: str) -> bool:
+    path_n = _normalize_path(path)
+    rule_n = _normalize_path(rule_path)
+    if rule_n == "/":
+        return True
+    prefix = rule_n.rstrip("/") or "/"
+    return path_n == prefix or path_n == prefix + "/" or path_n.startswith(prefix + "/")
+
+
+def host_is_private_literal(host: str) -> bool:
+    name = (host or "").lower().rstrip(".")
+    if name in {"localhost", "localhost.localdomain"}:
+        return True
+    try:
+        ip = ipaddress.ip_address(name)
+    except ValueError:
+        return False
+    mapped = getattr(ip, "ipv4_mapped", None)
+    if mapped is not None:
+        ip = mapped
+    return bool(ip.is_private or ip.is_loopback or ip.is_link_local)
+
+
+def allow_private_for_target(raw_target: str, cfg: ScopeConfig | None) -> bool:
+    """Private/loopback hops are allowed only when that hop itself is in scope."""
+    result = validate_target(raw_target, cfg)
+    return bool(result.allowed and host_is_private_literal(result.host))
+
+
 def _matches_host(host: str, port: str, rule_host: str) -> bool:
     rule_host = rule_host.lower()
     if rule_host.startswith("*."):
@@ -147,7 +200,7 @@ def _matches_rule(host: str, port: str, path: str, raw_target: str, rule: str, *
     split = _split_host_path_rule(rule)
     if split:
         r_host, r_path = split
-        return _matches_host(host, port, r_host) and (r_path == "/" or path.startswith(r_path))
+        return _matches_host(host, port, r_host) and _path_prefix_ok(path, r_path)
 
     if "/" in rule and "://" not in rule:
         try:
@@ -167,13 +220,13 @@ def _matches_rule(host: str, port: str, path: str, raw_target: str, rule: str, *
         try:
             _, r_host, r_port, r_path = normalize_target(rule)
             if _matches_host(host, port, r_host) and (not r_port or port == r_port):
-                return r_path == "/" or path.startswith(r_path)
+                return _path_prefix_ok(path, r_path)
         except ValueError:
             return False
 
     if rule.startswith("/"):
         # Path-only rules never authorize a host by themselves.
-        return path_only and path.startswith(rule)
+        return path_only and _path_prefix_ok(path, rule)
 
     if rule.startswith("*."):
         return _matches_host(host, port, rule)
@@ -185,7 +238,8 @@ def _matches_rule(host: str, port: str, path: str, raw_target: str, rule: str, *
     if rule.startswith("^") or rule.endswith("$"):
         try:
             cre = re.compile(rule)
-            return bool(cre.search(raw_target) or cre.search(host))
+            # Match host only — a pattern like ^https?:// must not authorize every URL.
+            return bool(cre.search(host) or (port and cre.search(f"{host}:{port}")))
         except re.error:
             return False
     return False

@@ -8,8 +8,15 @@ import sys
 from pathlib import Path
 
 from . import report, search, secrets, stream
-from .paths import find_project_root
+from .paths import find_plugin_root, find_workspace_root
 from .rpc import loads_and_run
+
+
+def _safe_cli_slug(raw: str) -> str:
+    slug = report.sanitize_slug(raw)
+    if not slug or slug in {".", ".."} or "/" in slug or "\\" in slug:
+        raise ValueError("invalid target slug")
+    return slug
 
 
 def main_smart_pipe(argv: list[str] | None = None) -> int:
@@ -21,10 +28,16 @@ def main_smart_pipe(argv: list[str] | None = None) -> int:
     if sys.stdin.isatty():
         print("Usage: <tool_command> | smart_pipe --target <SLUG> --tool <TOOL>", file=sys.stderr)
         return 1
-    root = find_project_root()
-    dest_dir = root / "recon" / args.target
+    root = find_workspace_root()
+    try:
+        slug = _safe_cli_slug(args.target)
+        tool = _safe_cli_slug(args.tool)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 2
+    dest_dir = root / "recon" / slug
     dest_dir.mkdir(parents=True, exist_ok=True)
-    raw_path = dest_dir / f"{args.tool}_raw.txt"
+    raw_path = dest_dir / f"{tool}_raw.txt"
     with raw_path.open("w", encoding="utf-8") as raw_out:
         stream.process_stream(sys.stdin, sys.stdout, raw_out, args.limit)
     try:
@@ -68,7 +81,7 @@ def main_search_knowledge(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", "-j", action="store_true")
     args = parser.parse_args(argv)
     query = " ".join(args.query)
-    root = find_project_root()
+    root = find_plugin_root()
     results = search.Searcher(root / "knowledge", root).search(query, args.source, args.limit, args.max_len)
     if args.json:
         print(json.dumps({"query": query, "source": args.source, "total_results": len(results), "results": [r.to_dict() for r in results]}, indent=2))
@@ -96,7 +109,7 @@ def main_aggregate_reports(argv: list[str] | None = None) -> int:
     parser.add_argument("target", nargs="?")
     parser.add_argument("--all", "-a", action="store_true")
     args = parser.parse_args(argv)
-    root = find_project_root()
+    root = find_workspace_root()
     reports_dir = root / "reports"
     if args.all:
         results = report.aggregate_all(reports_dir)
@@ -105,7 +118,12 @@ def main_aggregate_reports(argv: list[str] | None = None) -> int:
     if not args.target:
         print("Usage: aggregate_reports <TARGET_SLUG> OR aggregate_reports --all")
         return 1
-    target_dir = reports_dir / args.target
+    try:
+        slug = _safe_cli_slug(args.target)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 2
+    target_dir = reports_dir / slug
     target_dir.mkdir(parents=True, exist_ok=True)
     summary = report.aggregate_target(target_dir)
     print(

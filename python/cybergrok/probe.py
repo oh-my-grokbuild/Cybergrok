@@ -14,6 +14,7 @@ from http.client import HTTPMessage
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
+from collections.abc import Callable
 from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
 
 from .netguard import UnsafeURL, assert_safe_url
@@ -69,16 +70,22 @@ class _BlockedRedirect(HTTPError):
 
 
 class GuardedRedirectHandler(HTTPRedirectHandler):
-    def __init__(self, allow_private: bool, follow: bool) -> None:
+    def __init__(
+        self,
+        allow_private: bool,
+        follow: bool,
+        guard: Callable[[str], str] | None = None,
+    ) -> None:
         self.allow_private = allow_private
         self.follow = follow
+        self.guard = guard
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
         if not self.follow:
             raise HTTPError(req.full_url, code, msg, headers, fp)
         try:
-            safe = assert_safe_url(newurl, allow_private=self.allow_private)
-        except UnsafeURL as exc:
+            safe = self.guard(newurl) if self.guard else assert_safe_url(newurl, allow_private=self.allow_private)
+        except (UnsafeURL, ValueError) as exc:
             raise HTTPError(newurl, code, f"blocked redirect: {exc}", headers, fp) from exc
         return super().redirect_request(req, fp, code, msg, headers, safe)
 
@@ -139,9 +146,10 @@ def probe_httpx(url: str, timeout: int, tools_dir: Path | None, follow_redirects
     binary = find_httpx(tools_dir)
     if not binary:
         return None
+    # Never pass -fr: httpx follows hops before Cybergrok can apply scope/netguard.
     args = [binary, "-u", url, "-silent", "-status-code", "-title", "-tech-detect", "-json", "-timeout", str(timeout)]
     if follow_redirects:
-        args.append("-fr")
+        return None
     started = time.monotonic()
     try:
         proc = subprocess.run(args, capture_output=True, text=True, timeout=timeout + 5, check=False)
@@ -184,11 +192,12 @@ def probe_native(
     user_agent: str,
     allow_private: bool = False,
     insecure_tls: bool = False,
+    guard: Callable[[str], str] | None = None,
 ) -> ProbeResult:
-    raw = assert_safe_url(url, allow_private=allow_private)
+    raw = guard(url) if guard else assert_safe_url(url, allow_private=allow_private)
     parsed = urlparse(raw)
     ctx = ssl._create_unverified_context() if insecure_tls else ssl.create_default_context()
-    handler = GuardedRedirectHandler(allow_private=allow_private, follow=follow_redirects)
+    handler = GuardedRedirectHandler(allow_private=allow_private, follow=follow_redirects, guard=guard)
     opener = build_opener(handler, HTTPSHandler(context=ctx))
     req = Request(raw, headers={"User-Agent": user_agent, "Accept": "*/*"})
     started = time.monotonic()
@@ -222,11 +231,12 @@ def probe_native(
     if "Set-Cookie" in headers:
         cookies = [headers["Set-Cookie"].split(";", 1)[0].split("=", 1)[0].strip()]
     redirect = "" if not follow_redirects or final_url == raw else final_url
+    result_url = raw
     if follow_redirects and final_url != raw:
-        assert_safe_url(final_url, allow_private=allow_private)
-        redirect = final_url
+        result_url = guard(final_url) if guard else assert_safe_url(final_url, allow_private=allow_private)
+        redirect = result_url
     return ProbeResult(
-        url=raw,
+        url=result_url,
         scheme=parsed.scheme,
         host=parsed.hostname or "",
         port=str(parsed.port or ""),
@@ -250,16 +260,28 @@ def probe_target(
     timeout: int = 10,
     follow_redirects: bool = False,
     tools_dir: Path | None = None,
-    prefer_httpx: bool = True,
+    prefer_httpx: bool = False,
     user_agent: str = "Mozilla/5.0 (compatible; Cybergrok/1.0; Security Assessment)",
     allow_private: bool = False,
     insecure_tls: bool = False,
+    guard: Callable[[str], str] | None = None,
 ) -> ProbeResult:
-    assert_safe_url(url, allow_private=allow_private)
-    if prefer_httpx:
-        result = probe_httpx(url, timeout, tools_dir, follow_redirects)
+    checked = guard(url) if guard else assert_safe_url(url, allow_private=allow_private)
+    if prefer_httpx and not follow_redirects:
+        result = probe_httpx(checked, timeout, tools_dir, follow_redirects=False)
         if result:
             if result.url:
-                assert_safe_url(result.url, allow_private=allow_private)
+                if guard:
+                    guard(result.url)
+                else:
+                    assert_safe_url(result.url, allow_private=allow_private)
             return result
-    return probe_native(url, timeout, follow_redirects, user_agent, allow_private=allow_private, insecure_tls=insecure_tls)
+    return probe_native(
+        checked,
+        timeout,
+        follow_redirects,
+        user_agent,
+        allow_private=allow_private,
+        insecure_tls=insecure_tls,
+        guard=guard,
+    )

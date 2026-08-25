@@ -43,3 +43,13 @@ def test_url_slug_is_host_only():
     assert sanitize_slug("https://Example.COM/app/v1") == "example_com"
     assert sanitize_slug("../etc") == "etc"
     assert sanitize_slug("!!!") == "target"
+
+
+def test_record_finding_rejects_path_severity(tmp_path: Path):
+    import pytest
+
+    with pytest.raises(ValueError, match="severity"):
+        record_finding(tmp_path, "lab", "../escaped", "Title", "http://x", "d", "steps")
+    with pytest.raises(ValueError, match="severity"):
+        record_finding(tmp_path, "lab", "/tmp/abs", "Title", "http://x", "d", "steps")
+    assert not (tmp_path / "lab" / "escaped_title.md").exists()

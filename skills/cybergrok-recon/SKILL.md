@@ -9,6 +9,9 @@ description: >
 
 Discovery only. No `findings/` files.
 
+Read workspace `scope.yaml`. Only hosts under `in_scope` are authorized. If
+the named target is missing, stop. Do not treat a user-named URL as authorization.
+
 ## Steps
 
 1. Slug the target. `mkdir -p recon/<SLUG> reports/<SLUG>/evidence`

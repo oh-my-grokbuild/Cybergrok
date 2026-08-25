@@ -270,6 +270,8 @@ def record_finding(
 ) -> dict:
     slug = sanitize_slug(target_slug)
     sev = severity.lower().strip()
+    if sev not in {"critical", "high", "medium", "low", "info", "informational"}:
+        raise ValueError("severity must be critical, high, medium, low, or informational")
     target_dir = reports_dir / slug
     findings_dir = target_dir / "findings"
     pocs_dir = target_dir / "pocs"

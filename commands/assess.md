@@ -6,7 +6,9 @@ argument-hint: "<url-or-domain> [focus]"
 
 Run **Cybergrok** end-to-end against `$ARGUMENTS`.
 
-1. Treat the named target as authorized. Read `scope.yaml` for restrictions.
+1. Read workspace `scope.yaml`. Only hosts under `in_scope` are authorized.
+   If the named target is missing, stop and tell the operator to add it.
+   Do not treat `$ARGUMENTS` as authorization.
 2. Follow `skills/cybergrok-assess/SKILL.md` and `AGENTS.md`.
 3. Create `recon/<SLUG>` and `reports/<SLUG>/{findings,pocs,evidence}`.
 4. Phase 1–2: recon-scout work (or do it yourself if small).

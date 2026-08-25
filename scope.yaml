@@ -1,7 +1,7 @@
 program: "Cybergrok Security Assessment & Bug Bounty"
 authorization: "RESTRICTED"
 dynamic_target_override: false
-allow_ips: true
+allow_ips: false
 
 # Fail-closed: only these hosts may be probed/crawled.
 # Add the operator-approved engagement hostname before an assessment.
