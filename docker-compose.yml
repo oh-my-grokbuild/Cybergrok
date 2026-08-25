@@ -1,0 +1,25 @@
+services:
+  cybergrok:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cybergrok:latest
+    container_name: cybergrok
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./targets:/workspace/targets
+      - ./recon:/workspace/recon
+      - ./output:/workspace/output
+      - ./reports:/workspace/reports
+      - ./logs:/workspace/logs
+      - ./skills:/workspace/skills
+      - ./tools:/workspace/tools
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: bash
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - PUPPETEER_HEADLESS=true

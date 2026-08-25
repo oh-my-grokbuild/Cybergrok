@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$HERE/../.." && pwd)"
+export PYTHONPATH="${ROOT}/python${PYTHONPATH:+:$PYTHONPATH}"
+PY="${ROOT}/venv/bin/python3"
+if [ ! -x "$PY" ]; then PY="python3"; fi
+exec "$PY" -m cybergrok wrap nuclei -- "$@"

@@ -1,0 +1,24 @@
+{
+  "name": "cybergrok",
+  "description": "Cybergrok — autonomous offensive security plugin for Grok Build",
+  "owner": {
+    "name": "Kenny Dizi"
+  },
+  "plugins": [
+    {
+      "name": "cybergrok",
+      "description": "Offensive security plugin for Grok Build: Cybergrok session agent, 200+ playbooks, Python tools, TypeScript MCP.",
+      "category": "security",
+      "version": "1.0.0",
+      "author": {
+        "name": "Kenny Dizi"
+      },
+      "homepage": "https://github.com/search?q=cybergrok",
+      "keywords": ["cybergrok", "bug-bounty", "red-team", "recon"],
+      "source": {
+        "type": "local",
+        "path": "."
+      }
+    }
+  ]
+}
