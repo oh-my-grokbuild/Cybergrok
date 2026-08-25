@@ -35,23 +35,27 @@ Findings require raw request/response (or a differential). INFO noise goes to `e
 ```bash
 git clone <this-repo> Cybergrok
 cd Cybergrok
-./setup.sh
+./setup.sh                 # venv, TS build, optional grok plugin install --trust
 
-# From any workspace:
-grok plugin install /absolute/path/to/Cybergrok --trust
+# From another workspace, after install + enable in /plugins:
+#   grok --agent cybergrok:Cybergrok
+# or copy .grok/agents/cybergrok.md to ~/.grok/agents/
 ```
 
-Or work inside this checkout (`.grok/config.toml` already enables the plugin):
+Or work inside this checkout:
 
 ```bash
-./cybergrok          # wraps `grok` with tools/bin on PATH
+# add the host to scope.yaml first (fail-closed allowlist)
+./cybergrok          # grok --agent .grok/agents/cybergrok.md --trust
 # then:
-/assess https://example.com
-/recon  https://example.com
-/hunt   https://example.com idor
+/assess https://in-scope.example
+/recon  https://in-scope.example
+/hunt   https://in-scope.example idor
 /report example_com
-/doctor
+/cybergrok-doctor
 ```
+
+`./cybergrok` selects the **Cybergrok session agent**. Project plugins/hooks/MCP need folder trust (`--trust` / `/hooks-trust`). A model-chosen URL is not in scope until you add it to `scope.yaml`.
 
 The plugin ships:
 

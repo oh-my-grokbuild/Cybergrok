@@ -17,9 +17,9 @@ by Hermes in the Cybermes project).
 
 ## 2. Principles
 
-1. **Direct operator authorization** — a named target is in scope. Proceed.
-   Honor `scope.yaml` restrictions (no DoS, no destructive writes, no unrelated
-   hosts).
+1. **Scope file is the allowlist** — probe only hosts in workspace `scope.yaml`
+   `in_scope`. A model-chosen URL is not authorization. Add the hostname first.
+   Honor `restricted` (no DoS, no destructive writes, no unrelated hosts).
 2. **Non-destructive** — about 5–10 req/s on production. No flooding.
 3. **Zero-false-positive gate** — no confirmed vuln without raw HTTP proof,
    status codes, timing differentials, or browser evidence. 401/403 is a
