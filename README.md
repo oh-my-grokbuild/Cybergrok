@@ -122,12 +122,11 @@ reports/<slug>/
 ```bash
 python3 -m venv venv && source venv/bin/activate
 pip install -e ".[dev]"
-ruff check python tools scripts examples
-ruff format --check python/cybergrok python/tests
-ty check python/cybergrok python/tests
-PYTHONPATH=python pytest python/tests -q
+./lint.sh
+./typecheck.sh
+./test.sh
 
-cd mcp && npm install && npm run build && npm run typecheck
+cd mcp && npm install && npm run build
 ```
 
 Legal use only: authorized assessments, bug-bounty programs you are invited to, and your own systems. See `scope.yaml` and `AGENTS.md`.

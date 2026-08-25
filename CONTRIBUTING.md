@@ -53,20 +53,17 @@ git checkout -b fix/your-fix-name
 ```
 
 ### 3. Make and Verify Changes
-* Lint and typecheck first-party Python (`ruff` + `ty`):
+* Lint, typecheck, and test (same gates as CI):
   ```bash
   pip install -e ".[dev]"
-  ruff check python tools scripts examples
-  ruff format --check python/cybergrok python/tests
-  ty check python/cybergrok python/tests
-  ```
-* Run the Python engine tests:
-  ```bash
-  PYTHONPATH=python pytest python/tests -q
+  ./lint.sh
+  ./typecheck.sh --python
+  ./test.sh
   ```
 * Typecheck the TypeScript MCP server:
   ```bash
-  cd mcp && npm run typecheck
+  (cd mcp && npm ci)
+  ./typecheck.sh --ts
   ```
 * On Windows, test compatibility:
   ```powershell

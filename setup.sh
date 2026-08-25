@@ -120,6 +120,7 @@ if [ -f "$ROOT/tools/update_tools.sh" ]; then
 fi
 
 chmod +x "$ROOT/cybergrok" "$ROOT/env.sh" "$ROOT/scripts/cybergrok-mcp.sh" \
+         "$ROOT/lint.sh" "$ROOT/typecheck.sh" "$ROOT/test.sh" \
          "$ROOT/hooks/bin/"*.sh 2>/dev/null || true
 
 if command -v grok >/dev/null 2>&1; then

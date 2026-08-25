@@ -14,10 +14,9 @@ jobs:
         with:
           python-version: "3.14"
       - run: pip install -e ".[dev]"
-      - run: ruff check python tools scripts examples
-      - run: ruff format --check python/cybergrok python/tests
-      - run: ty check python/cybergrok python/tests --error-on-warning
-      - run: PYTHONPATH=python pytest python/tests -q
+      - run: ./lint.sh
+      - run: ./typecheck.sh --python
+      - run: ./test.sh
 
   typescript:
     runs-on: ubuntu-latest
@@ -28,7 +27,6 @@ jobs:
           node-version: "22"
       - run: npm ci
         working-directory: mcp
-      - run: npm run typecheck
-        working-directory: mcp
+      - run: ./typecheck.sh --ts
       - run: npm run build
         working-directory: mcp
