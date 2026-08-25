@@ -1,6 +1,8 @@
 ---
 name: engagement-deliverables-and-validation
 description: Workspace conventions for authorized security-engagement deliverables — canonical report location (/workspace/reports/<target>/), plain files not zip, follow-the-existing-format rule, report-aggregator overwrite trap, bypass-before-clear validation gate for negative claims, and Cloudflare UA pitfalls in PoC reproduction. Use at report-writing time or before declaring any control "secure".
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Engagement Deliverables & Validation Conventions

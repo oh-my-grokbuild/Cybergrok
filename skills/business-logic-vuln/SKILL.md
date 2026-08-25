@@ -4,6 +4,8 @@ description: >-
   Entry P1 category router for business logic testing. Use when workflow abuse,
   race conditions, pricing flaws, or multi-step state attacks matter more than
   parser-level input injection.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Business Logic Router

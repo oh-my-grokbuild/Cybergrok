@@ -1,6 +1,8 @@
 ---
 name: hunt-account-abuse
 description: "Hunt non-ATO account-abuse vulnerabilities — logic flaws in authentication/account endpoints that cause harm without taking over another account. Covers: per-email account-lockout DoS (rate-limit keyed on victim email instead of IP), HTTP-method anomalies on auth routes (DELETE/PUT on /login returning success), password-reset fragility and error-handling leaks, and the missing-header/CORS triage that turns these from noise into rated findings. Use when testing login/register/forgot-password/MFA endpoints, reviewing auth flow resilience, or rating auth-logic bugs that are NOT full account takeover. Complements hunt-ato (which covers takeover paths only)."
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Hunt — Non-ATO Account Abuse

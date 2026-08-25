@@ -1,6 +1,8 @@
 ---
 name: api-testing
 description: Evaluates REST, GraphQL, and JSON-RPC APIs for authorization issues (BOLA/IDOR), schema exposure, and business logic flaws.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # API Testing Skill

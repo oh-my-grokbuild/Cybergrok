@@ -2,6 +2,8 @@
 name: arbitrary-write-to-rce
 description: >-
   Arbitrary write to RCE playbook. Use when you have an arbitrary write primitive (from heap exploitation, format string, or OOB write) and need to convert it into code execution by targeting GOT, hooks, _IO_FILE vtable, exit_funcs, TLS_dtor_list, modprobe_path, .fini_array, or C++ vtables.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Arbitrary Write to Code Execution — Expert Attack Playbook

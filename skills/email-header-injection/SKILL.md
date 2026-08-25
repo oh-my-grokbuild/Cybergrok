@@ -2,6 +2,8 @@
 name: email-header-injection
 description: >-
   Email header injection and spoofing playbook. Use when testing contact forms, email APIs, password reset flows, or any feature that constructs SMTP messages with user-controlled fields. Covers CRLF injection in headers, SPF/DKIM/DMARC bypass, and phishing amplification.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Email Header Injection — Expert Attack Playbook

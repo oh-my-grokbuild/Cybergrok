@@ -1,6 +1,8 @@
 ---
 name: business-logic-and-idor
 description: Evaluates multi-tenant authorization barriers, Insecure Direct Object References (IDOR), parameter tampering, and privilege escalation logic.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Business Logic & IDOR Testing Skill

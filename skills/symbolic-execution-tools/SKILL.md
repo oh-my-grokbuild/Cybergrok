@@ -4,6 +4,8 @@ description: >-
   Symbolic execution and constraint solving playbook. Use when solving CTF
   reversing challenges, recovering keys, bypassing checks, or automating
   binary analysis with angr, Z3, or Unicorn Engine.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Symbolic Execution Tools — Expert Analysis Playbook

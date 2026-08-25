@@ -1,6 +1,8 @@
 ---
 name: stealth-web-recon
 description: WAF-aware, rate-limited external recon and web asset discovery for bug bounty / authorized pentest targets. Avoids triggering Cloudflare / openresty / generic WAF blocks while still mapping subdomains, panels, and tech stack.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Stealth Web Recon — WAF-Aware Asset Discovery

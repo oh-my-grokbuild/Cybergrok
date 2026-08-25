@@ -1,6 +1,8 @@
 ---
 name: oast-blind-testing
 description: Generates Out-of-Band (OAST) interaction payloads with interactsh-client to detect and confirm Blind SSRF, Blind RCE, and Out-of-Band data leakage.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Out-Of-Band (OAST) Blind Testing Skill

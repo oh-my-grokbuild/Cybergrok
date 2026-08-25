@@ -1,6 +1,8 @@
 ---
 name: web-enumeration
 description: Discovers web application endpoints, Javascript files, hidden paths, and technology fingerprints using httpx and katana.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Web Enumeration Skill

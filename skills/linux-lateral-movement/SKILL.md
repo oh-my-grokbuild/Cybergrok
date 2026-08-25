@@ -2,6 +2,8 @@
 name: linux-lateral-movement
 description: >-
   Linux lateral movement playbook. Use after gaining initial access to pivot across Linux hosts via SSH hijacking, credential harvesting, internal pivoting, D-Bus exploitation, sudo token reuse, and shared filesystem abuse.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Linux Lateral Movement — Expert Attack Playbook

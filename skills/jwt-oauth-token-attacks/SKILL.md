@@ -2,6 +2,8 @@
 name: jwt-oauth-token-attacks
 description: >-
   JWT and OAuth token attack playbook. Use when validating token trust, signing algorithms, key handling, claim abuse, bearer flows, and OAuth account-binding weaknesses.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: JWT and OAuth 2.0 Token Attacks — Expert Attack Playbook

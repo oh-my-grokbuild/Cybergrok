@@ -2,6 +2,8 @@
 name: xss-cross-site-scripting
 description: >-
   XSS playbook. Use when user-controlled content reaches HTML, attributes, JavaScript, DOM sinks, uploads, or multi-context rendering paths.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Cross-Site Scripting (XSS) — Expert Attack Playbook

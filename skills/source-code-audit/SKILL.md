@@ -1,6 +1,8 @@
 ---
 name: source-code-audit
 description: Performs whitebox static application security testing (SAST), code review, API route extraction, credential hunting, and vulnerability pattern detection in local repositories or GitHub codebases.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Source Code Audit Skill (SAST & Whitebox Security)

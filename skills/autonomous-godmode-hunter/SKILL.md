@@ -1,6 +1,8 @@
 ---
 name: autonomous-godmode-hunter
 description: Autonomous end-to-end security research and full-surface bug hunting engine. Executes non-stop reconnaissance, attack-surface discovery, parameter mining, multi-stage vulnerability verification, minimal-impact PoC generation, and structured reporting on authorized targets.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Autonomous God-Mode Bug Hunter Skill

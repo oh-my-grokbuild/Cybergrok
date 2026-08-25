@@ -2,6 +2,8 @@
 name: api-auth-and-jwt-abuse
 description: >-
   API authentication and JWT abuse playbook. Use when testing bearer tokens, API keys, claim trust, header spoofing, rate limits, and API auth boundary weaknesses.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: API Auth and JWT Abuse — Token Trust, Header Tricks, and Rate Limits

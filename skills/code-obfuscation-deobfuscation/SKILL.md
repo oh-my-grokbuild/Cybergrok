@@ -4,6 +4,8 @@ description: >-
   Code obfuscation analysis and deobfuscation playbook. Use when reversing
   binaries protected by junk code, opaque predicates, self-modifying code,
   control flow flattening, VM protection, or string encryption.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Code Obfuscation & Deobfuscation — Expert Analysis Playbook

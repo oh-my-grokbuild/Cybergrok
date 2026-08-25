@@ -2,6 +2,8 @@
 name: windows-av-evasion
 description: >-
   AV/EDR evasion playbook for Windows. Use when bypassing AMSI, ETW, .NET assembly detection, shellcode execution, process injection, API hooking, and signature-based detection on Windows endpoints.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: AV/EDR Evasion — Expert Attack Playbook

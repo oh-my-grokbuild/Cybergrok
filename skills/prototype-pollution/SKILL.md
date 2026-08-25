@@ -5,6 +5,8 @@ description: >-
   merged into objects (query parsers, JSON bodies, deep assign), when
   configuring libraries via untrusted keys, or when hunting RCE gadgets via
   polluted Object.prototype in Node or the browser.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Prototype Pollution — Expert Attack Playbook

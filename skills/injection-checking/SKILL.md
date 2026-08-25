@@ -4,6 +4,8 @@ description: >-
   Entry P1 category router for injection testing. Use when routing between XSS,
   SQLi, SSRF, XXE, SSTI, command injection, and NoSQL injection workflows based
   on how attacker-controlled input is consumed.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Injection Testing Router

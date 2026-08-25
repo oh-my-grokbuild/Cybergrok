@@ -7,6 +7,8 @@ description: >-
   `^` parent syntax, live read-only validation of leaked static keys, and the
   "removed later != fixed" remediation trap. Use when a target runs its own git
   server or when leaked credentials need impact proof.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # GIT-HISTORY SECRET MINING — Self-Hosted Forges (Gitea/Gogs/GitLab)

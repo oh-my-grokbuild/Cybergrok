@@ -5,6 +5,8 @@ description: >-
   trusts the Host header for generating URLs, routing requests, or access control
   — enabling password reset poisoning, web cache poisoning, SSRF via routing,
   and virtual host bypass.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: HTTP Host Header Attacks — Injection & Routing Abuse

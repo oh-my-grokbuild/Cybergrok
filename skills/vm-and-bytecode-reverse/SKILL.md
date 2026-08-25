@@ -4,6 +4,8 @@ description: >-
   Custom VM and bytecode reverse engineering playbook. Use when CTF challenges
   or protected software implement custom virtual machines with proprietary
   bytecode, dispatcher loops, or maze-style challenges.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: VM & Bytecode Reverse Engineering — Expert Analysis Playbook

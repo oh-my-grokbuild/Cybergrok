@@ -2,6 +2,8 @@
 name: binary-protection-bypass
 description: >-
   Binary protection bypass playbook. Use when identifying and bypassing ASLR, PIE, NX/DEP, stack canary, RELRO, FORTIFY_SOURCE, CET, and MTE protections in ELF binaries to enable exploitation.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Binary Protection Bypass — Expert Attack Playbook

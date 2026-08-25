@@ -1,6 +1,8 @@
 ---
 name: parameter-mining
 description: Discovers hidden GET/POST/JSON parameters from web applications and categorizes them for IDOR, SSRF, SQLi, and redirect testing.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Parameter Mining Skill

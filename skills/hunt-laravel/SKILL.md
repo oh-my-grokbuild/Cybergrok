@@ -3,6 +3,8 @@ name: hunt-laravel
 description: Hunt Laravel specific vulnerabilities — Debug mode leakage (APP_DEBUG=true exposes full stack trace + env vars), Laravel Telescope/Horizon dashboard unauthorized access, Ignition RCE (CVE-2021-3129), Signed URL manipulation, Queue Worker abuse, mass assignment via Eloquent, deserialization via cookies, .env file exposure. Use when target runs Laravel (PHP) — detected via X-Powered-By, Laravel session cookies, or /storage/ paths.
 sources: hackerone_public, cve_database
 report_count: 14
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # HUNT-LARAVEL — Laravel Specific Vulnerabilities

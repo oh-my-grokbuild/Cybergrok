@@ -1,6 +1,8 @@
 ---
 name: custom-ai-router-assessment
 description: Assess self-hosted AI API routers/gateways built on CUSTOM web stacks (Next.js App Router class — Custom AI Router, 9router-style), as opposed to New API/One API forks. Use when target shows x-powered-by Next.js + /_next/static/chunks bundles, an AI-gateway product description, /subscription customer portal, /maintainer admin panel, or OpenAI-compatible /v1/* endpoints. Covers chunk route-mining, panel discovery via redirects, auth-gate probing with fake IDs, embedded-key verification (Firebase/OAuth), login rate-limit testing, common finding patterns, and non-destructive PoC discipline.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Custom AI Router Assessment (Next.js-class self-hosted gateways)

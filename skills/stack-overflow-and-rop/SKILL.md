@@ -2,6 +2,8 @@
 name: stack-overflow-and-rop
 description: >-
   Stack overflow and ROP playbook. Use when exploiting buffer overflows to hijack control flow via return address overwrite, ROP chains, ret2libc, ret2csu, ret2dlresolve, or SROP on Linux userland binaries.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Stack Overflow & ROP — Expert Attack Playbook

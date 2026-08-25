@@ -1,6 +1,8 @@
 ---
 name: bug-bounty-target-prioritization
 description: Autonomously prioritize and select high-value targets from reconnaissance results for deep vulnerability analysis in bug bounty engagements.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Bug Bounty Target Prioritization

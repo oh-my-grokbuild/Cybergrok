@@ -5,6 +5,8 @@ description: >-
   JavaScript execution is blocked (CSP, sanitizer strips event handlers, WAF
   blocks script tags) — exfiltrate CSRF tokens, session data, and page content
   by injecting unclosed HTML tags that capture subsequent page content.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Dangling Markup Injection — Exfiltration Without JavaScript

@@ -5,6 +5,8 @@ description: >-
   dangling CNAME/NS/MX records pointing to deprovisioned cloud resources, expired
   third-party services, or unclaimed SaaS tenants that an attacker can register
   to serve content under the victim's domain.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Subdomain Takeover — Detection & Exploitation Playbook

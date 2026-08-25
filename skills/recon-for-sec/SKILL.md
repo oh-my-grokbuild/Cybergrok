@@ -4,6 +4,8 @@ description: >-
   Entry P1 category router for reconnaissance and methodology. Use when mapping
   scope, discovering assets, fingerprinting technology, building endpoint
   inventory, and choosing the first high-value security testing path.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Recon and Methodology Router

@@ -5,6 +5,8 @@ license: Apache-2.0
 metadata:
   author: usestrix
   homepage: https://docs.strix.ai
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Set up Strix in CI/CD

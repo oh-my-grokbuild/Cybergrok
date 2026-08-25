@@ -1,6 +1,8 @@
 ---
 name: evidence-collection
 description: Captures, timestamps, formats, and sanitizes verifiable evidence (HTTP transactions, deterministic PoC scripts, screenshots, and terminal logs) following the "No PoC, No Finding" standard.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Evidence Collection Skill — Deterministic PoC & Artifacts

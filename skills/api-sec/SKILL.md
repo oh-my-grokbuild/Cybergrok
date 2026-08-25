@@ -4,6 +4,8 @@ description: >-
   Entry P1 category router for API security. Use when choosing between API
   recon, authorization, token abuse, and hidden-parameter workflows before any
   deeper API topic skill.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # API Security Router

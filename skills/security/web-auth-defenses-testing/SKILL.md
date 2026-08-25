@@ -1,6 +1,8 @@
 ---
 name: web-auth-defenses-testing
 description: Methodology for testing authentication defenses on web apps — login lockout/rate-limit scope determination (global vs per-account vs per-IP), forgot-password error handling, auth-route method/logic anomalies, and hosted-app (Next.js/Vercel) auth probing. Produces correctly-scored findings (Critical vs Medium) and safe, non-destructive testing.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Web Auth Defenses Testing

@@ -1,6 +1,8 @@
 ---
 name: blackbox-web-audit
 description: Authorized black-box web/API audit WITHOUT test accounts — unauth probing discipline, unauth-IDOR rounds using leaked IDs, JS-bundle-first attack surface mapping, non-destructive gates, and local report delivery conventions (no zip, follow sibling example folder). Use when asked to audit/pentest a target where you hold no credentials, and when writing the local report deliverable afterwards.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Black-Box Web Audit Without Credentials

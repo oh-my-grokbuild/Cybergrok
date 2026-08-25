@@ -1,6 +1,8 @@
 ---
 name: news-briefing
 description: Fetch and summarize current news/headlines for any country, language, or topic using Google News RSS via curl. Use when the user asks for latest news, today's headlines, a news digest, or topic-specific news summaries.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # News Briefing via Google News RSS

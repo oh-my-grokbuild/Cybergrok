@@ -1,6 +1,8 @@
 ---
 name: bug-bounty-reporting-workflow
 description: Class-level workflow for authorized bug bounty / web pentest engagements — covers report language, mandatory validation gate, sensitive-data emphasis, and CORS/API discovery techniques. Use whenever the user asks to "check", "recon", "pentest", or write a bug bounty report for a target.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Bug Bounty Reporting Workflow

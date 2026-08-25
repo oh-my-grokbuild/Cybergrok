@@ -1,6 +1,8 @@
 ---
 name: bb-methodology
 description: Use at the START of any bug bounty hunting session, when switching targets, or when feeling lost about what to do next. Master orchestrator that combines the 5-phase non-linear hunting workflow with the critical thinking framework (developer psychology, anomaly detection, What-If experiments). Routes to all other skills based on current hunting phase. Also use when asking "what should I do next" or "where am I in the process."
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Bug Bounty Methodology: Workflow + Mindset

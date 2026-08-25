@@ -3,6 +3,8 @@ name: hunt-misc
 description: Hunting skill for misc vulnerabilities. Built from 225 public bug bounty reports. Use when hunting misc on any target.
 sources: github, hackerone_public
 report_count: 225
+user-invocable: false
+disable-model-invocation: true
 ---
 
 ## Crown Jewel Targets

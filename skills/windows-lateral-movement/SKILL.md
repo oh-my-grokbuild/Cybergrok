@@ -2,6 +2,8 @@
 name: windows-lateral-movement
 description: >-
   Windows lateral movement playbook. Use when pivoting between Windows hosts via PsExec, WMI, WinRM, DCOM, RDP, pass-the-hash, overpass-the-hash, or pass-the-ticket techniques.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Windows Lateral Movement — Expert Attack Playbook

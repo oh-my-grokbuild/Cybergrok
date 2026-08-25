@@ -4,6 +4,8 @@ description: >-
   Lattice-based cryptanalysis playbook. Use when attacking RSA via Coppersmith
   small roots, recovering DSA/ECDSA nonces from bias, solving knapsack
   problems, or applying LLL/BKZ reduction to cryptographic constructions.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Lattice-Based Cryptanalysis — Expert Attack Playbook

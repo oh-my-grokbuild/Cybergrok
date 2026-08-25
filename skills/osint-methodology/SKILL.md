@@ -60,6 +60,8 @@ triggers:
   - recon methodology
   - threat actor investigation
   - attribution
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # OSINT Methodology — External Red-Team Edition

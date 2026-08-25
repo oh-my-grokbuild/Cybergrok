@@ -130,6 +130,8 @@ triggers:
   - community bug reports
   - prior disclosures
   - bug bounty reference
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Offensive OSINT — External Red-Team Arsenal

@@ -1,6 +1,8 @@
 ---
 name: ai-api-gateway-security
 description: Assess deployments of New API / One API (and forks) — AI API routers / gateways ("Unified AI API gateway" SPAs) and their Midtrans-backed storefront subdomains (topup.* / shop.*). Covers target identification, JS-bundle route mining, the misleading /api/setup root_init guard, /api/status info disclosure, login rate-limiting checks, storefront payment-bypass PoC (Midtrans bind), coupon/redeem & IDOR-topup testing, and non-destructive PoC discipline.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # AI API Gateway Security — New API / One API Assessment

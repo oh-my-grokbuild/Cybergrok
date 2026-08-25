@@ -2,6 +2,8 @@
 name: http2-specific-attacks
 description: >-
   HTTP/2 protocol-specific attack playbook. Use when the target supports HTTP/2 and you need to exploit binary framing, HPACK compression, h2c upgrade smuggling, pseudo-header injection, stream multiplexing abuse, or H2→H1 downgrade translation flaws.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: HTTP/2 Specific Attacks — Expert Attack Playbook

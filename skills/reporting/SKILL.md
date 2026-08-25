@@ -1,6 +1,8 @@
 ---
 name: reporting
 description: Generates standardized, professional Bug Bounty vulnerability reports in markdown format following HackerOne and Bugcrowd standards.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Reporting Skill — Bug Bounty Vulnerability Report

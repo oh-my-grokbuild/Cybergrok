@@ -2,6 +2,8 @@
 name: http-parameter-pollution
 description: >-
   HTTP Parameter Pollution (HPP): duplicate query/body keys parsed differently by servers, proxies, WAFs, and app frameworks. Use when filters and application layers disagree on which value wins, enabling bypass, SSRF second URL, logic abuse, or CSRF token confusion.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: HTTP Parameter Pollution (HPP)

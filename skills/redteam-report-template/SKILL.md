@@ -3,6 +3,8 @@ name: redteam-report-template
 description: Client-facing red-team deliverable format — codifies the Subject / Observations / Description / Impact / Recommendation / PoC structure used for external red-team engagements (not bug-bounty platform reports). Different audience, different tone, different cadence. Built from an authorized engagement deliverable where 14 findings were packaged into a 52KB MD + 2.2MB DOCX with 16 embedded screenshots. Use when the engagement is "external red team for an enterprise client" (not H1/Bugcrowd/Intigriti), when generating the final report, when the client has specified a custom report format, or when packaging findings into DOCX/PDF.
 sources: authorized-engagement-deliverable, enterprise-redteam-report-conventions
 report_count: 1
+user-invocable: false
+disable-model-invocation: true
 ---
 
 ## When to use

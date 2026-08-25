@@ -2,6 +2,8 @@
 name: saml-sso-assertion-attacks
 description: >-
   SAML SSO assertion attack playbook. Use when testing signature validation, assertion wrapping, audience restrictions, ACS handling, XML trust boundaries, and enterprise SSO flaws.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: SAML SSO and Assertion Attacks — Signature Validation, Binding, and Trust Confusion

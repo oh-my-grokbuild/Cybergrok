@@ -2,6 +2,8 @@
 name: recon-and-methodology
 description: >-
   Reconnaissance and methodology playbook. Use when mapping assets, discovering endpoints, fingerprinting technology, and building a structured testing plan for a new target.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Recon and Methodology — Expert Bug Bounty Playbook

@@ -4,6 +4,8 @@ description: >-
   RSA attack playbook for CTF and real-world cryptanalysis. Use when given
   RSA parameters (n, e, c) and need to recover plaintext by exploiting
   weak keys, small exponents, shared factors, or padding oracles.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: RSA Attack Techniques — Expert Cryptanalysis Playbook

@@ -1,6 +1,8 @@
 ---
 name: recon-fallbacks
 description: Class-level playbook for external recon when the standard Go/unix toolchain is unavailable — Python-equivalent probing, DNS resolution, port scanning, CMS/git-server fingerprinting, anonymous repo enumeration, and verified finding write-ups. Use alongside or instead of recon/web2-recon pipelines when binaries are missing or probing needs custom logic.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # RECON FALLBACKS — no-binary recon & verified reporting

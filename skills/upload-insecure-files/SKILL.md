@@ -2,6 +2,8 @@
 name: upload-insecure-files
 description: >-
   Insecure file upload playbook. Use when testing upload validation, storage paths, processing pipelines, preview behavior, overwrite risks, and upload-to-RCE chains.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Upload Insecure Files — Validation Bypass, Storage Abuse, and Processing Chains

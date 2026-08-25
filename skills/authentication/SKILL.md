@@ -1,6 +1,8 @@
 ---
 name: authentication
 description: Assesses authentication flows, OAuth2 / OIDC implementations, session lifecycle management, and JWT security.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Authentication & Session Testing Skill

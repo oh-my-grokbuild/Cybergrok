@@ -3,6 +3,8 @@ name: hunt-open-redirect
 description: Hunt Open Redirect — all types including low-impact, chained to OAuth token theft → ATO, phishing chains. URL parameter manipulation, JavaScript redirect, meta refresh, header injection. Use when hunting redirect bugs or building ATO chains.
 sources: hackerone_public
 report_count: 28
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # HUNT-OPEN-REDIRECT — Open Redirect

@@ -5,6 +5,8 @@ description: >-
   CDNs, or load balancers disagree with the origin on message framing
   (Content-Length vs Transfer-Encoding), on HTTP/2→HTTP/1 translation, or when
   exploring client-side desync via browser fetch pipelines.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: HTTP Request Smuggling — Expert Attack Playbook

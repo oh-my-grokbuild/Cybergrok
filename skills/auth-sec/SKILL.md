@@ -4,6 +4,8 @@ description: >-
   Entry P1 category router for authentication and authorization. Use when
   testing login flows, sessions, object authorization, JWT, OAuth, CORS, CSRF,
   and enterprise SSO weaknesses before any deeper auth topic skill.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Authentication and Authorization Router

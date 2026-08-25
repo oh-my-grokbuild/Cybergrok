@@ -5,6 +5,8 @@ description: >-
   application testing, API security assessment, recon, vulnerability triage,
   exploit path planning, or choosing the right next category skill before any
   deep topic skill.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # HACKING SKILLS / HackSkills

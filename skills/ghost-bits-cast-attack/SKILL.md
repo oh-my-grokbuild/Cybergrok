@@ -9,6 +9,8 @@ description: >-
   Fastjson, Apache Commons BCEL, Apache HttpClient, Angus Mail, JDK
   HttpServer, Lettuce, Jodd, XMLWriter and re-enables many "patched" CVEs
   through WAF bypass.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Ghost Bits / Cast Attack — Java char to byte Narrowing Playbook

@@ -1,6 +1,8 @@
 ---
 name: fuzzing-and-content-discovery
 description: Discovers hidden directories, backup files, configuration endpoints, and virtual hosts using high-speed ffuf with intelligent filtering.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Fuzzing & Content Discovery Skill

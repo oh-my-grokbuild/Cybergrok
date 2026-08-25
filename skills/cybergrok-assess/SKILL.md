@@ -12,8 +12,9 @@ This is the autoload orchestrator that used to live in Hermes
 
 ## 1. Authorization
 
-The operator-named target is authorized. Read `scope.yaml` for **restrictions**
-(DoS, destructive writes, unrelated hosts). Do not wait for a second confirmation.
+Read workspace `scope.yaml`. Only hosts under `in_scope` are authorized. If the
+named target is missing, stop and tell the operator to add it. Do not treat a
+URL you selected as authorization.
 
 ## 2. Pipeline
 

@@ -3,6 +3,8 @@ name: hunt-websocket
 description: "Hunt WebSocket vulnerabilities — Cross-Site WebSocket Hijacking (CSWSH), missing/weak Origin validation on the WS handshake, no per-message authentication, message tampering, socket.io namespace/room authorization bypass, and handshake-layer Upgrade smuggling. Use when target has WebSocket endpoints (ws:// or wss://), socket.io / SignalR / Phoenix Channels, real-time features, chat, live dashboards, notifications, or trading platforms."
 sources: hackerone_public, portswigger_research, cve
 report_count: 11
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # HUNT-WEBSOCKET — WebSocket Security

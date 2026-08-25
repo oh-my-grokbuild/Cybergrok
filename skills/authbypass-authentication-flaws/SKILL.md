@@ -2,6 +2,8 @@
 name: authbypass-authentication-flaws
 description: >-
   Authentication bypass testing playbook. Use when assessing login flows, password reset logic, account recovery, MFA bypass, token predictability, brute-force resistance, and session boundary flaws.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Authentication Bypass — Expert Attack Playbook

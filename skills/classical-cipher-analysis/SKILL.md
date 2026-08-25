@@ -5,6 +5,8 @@ description: >-
   ciphers, Vigenere, transposition, XOR, or encoded text in CTF challenges
   that requires frequency analysis, Kasiski examination, or known-plaintext
   cryptanalysis.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # SKILL: Classical Cipher Analysis — Expert Cryptanalysis Playbook

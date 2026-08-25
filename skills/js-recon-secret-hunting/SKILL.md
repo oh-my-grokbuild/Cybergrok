@@ -1,6 +1,8 @@
 ---
 name: js-recon-secret-hunting
 description: Downloads client-side JavaScript bundles, searches for leaked API keys, tokens, hardcoded credentials, and hidden internal endpoints.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # JavaScript Recon & Secret Hunting Skill

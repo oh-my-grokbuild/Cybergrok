@@ -1,6 +1,8 @@
 ---
 name: recon
 description: Orchestrates scoped subdomain enumeration, DNS resolution, and active web probing for bug bounty targets.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Recon Skill — Subdomain & Asset Discovery
