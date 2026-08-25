@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 from collections.abc import Callable
 from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
 
-from .netguard import UnsafeURL, assert_safe_url
+from .netguard import UnsafeURL, assert_safe_url, prepare_safe_request
 
 TITLE_RE = re.compile(r"(?i)<title[^>]*>([^<]+)</title>")
 
@@ -84,10 +84,16 @@ class GuardedRedirectHandler(HTTPRedirectHandler):
         if not self.follow:
             raise HTTPError(req.full_url, code, msg, headers, fp)
         try:
-            safe = self.guard(newurl) if self.guard else assert_safe_url(newurl, allow_private=self.allow_private)
+            if self.guard:
+                self.guard(newurl)
+            fetch, host_hdr = prepare_safe_request(newurl, allow_private=self.allow_private)
         except (UnsafeURL, ValueError) as exc:
             raise HTTPError(newurl, code, f"blocked redirect: {exc}", headers, fp) from exc
-        return super().redirect_request(req, fp, code, msg, headers, safe)
+        nxt = super().redirect_request(req, fp, code, msg, headers, fetch)
+        if nxt is not None:
+            nxt.add_unredirected_header("Host", host_hdr)
+            nxt.headers["Host"] = host_hdr
+        return nxt
 
 
 def extract_title(html: str) -> str:
@@ -142,14 +148,37 @@ def find_httpx(tools_dir: Path | None = None) -> str | None:
     return shutil.which("httpx")
 
 
-def probe_httpx(url: str, timeout: int, tools_dir: Path | None, follow_redirects: bool) -> ProbeResult | None:
+def probe_httpx(
+    url: str,
+    timeout: int,
+    tools_dir: Path | None,
+    follow_redirects: bool,
+    allow_private: bool = False,
+) -> ProbeResult | None:
     binary = find_httpx(tools_dir)
     if not binary:
         return None
     # Never pass -fr: httpx follows hops before Cybergrok can apply scope/netguard.
-    args = [binary, "-u", url, "-silent", "-status-code", "-title", "-tech-detect", "-json", "-timeout", str(timeout)]
     if follow_redirects:
         return None
+    try:
+        fetch, host_hdr = prepare_safe_request(url, allow_private=allow_private)
+    except UnsafeURL:
+        return None
+    args = [
+        binary,
+        "-u",
+        fetch,
+        "-H",
+        f"Host: {host_hdr}",
+        "-silent",
+        "-status-code",
+        "-title",
+        "-tech-detect",
+        "-json",
+        "-timeout",
+        str(timeout),
+    ]
     started = time.monotonic()
     try:
         proc = subprocess.run(args, capture_output=True, text=True, timeout=timeout + 5, check=False)
@@ -194,12 +223,15 @@ def probe_native(
     insecure_tls: bool = False,
     guard: Callable[[str], str] | None = None,
 ) -> ProbeResult:
-    raw = guard(url) if guard else assert_safe_url(url, allow_private=allow_private)
+    if guard:
+        guard(url)
+    fetch, host_hdr = prepare_safe_request(url, allow_private=allow_private)
+    raw = url
     parsed = urlparse(raw)
     ctx = ssl._create_unverified_context() if insecure_tls else ssl.create_default_context()
     handler = GuardedRedirectHandler(allow_private=allow_private, follow=follow_redirects, guard=guard)
     opener = build_opener(handler, HTTPSHandler(context=ctx))
-    req = Request(raw, headers={"User-Agent": user_agent, "Accept": "*/*"})
+    req = Request(fetch, headers={"User-Agent": user_agent, "Accept": "*/*", "Host": host_hdr})
     started = time.monotonic()
     body = ""
     headers: dict[str, str] = {}
@@ -266,9 +298,12 @@ def probe_target(
     insecure_tls: bool = False,
     guard: Callable[[str], str] | None = None,
 ) -> ProbeResult:
-    checked = guard(url) if guard else assert_safe_url(url, allow_private=allow_private)
+    if guard:
+        guard(url)
+    else:
+        assert_safe_url(url, allow_private=allow_private)
     if prefer_httpx and not follow_redirects:
-        result = probe_httpx(checked, timeout, tools_dir, follow_redirects=False)
+        result = probe_httpx(url, timeout, tools_dir, follow_redirects=False, allow_private=allow_private)
         if result:
             if result.url:
                 if guard:
@@ -277,7 +312,7 @@ def probe_target(
                     assert_safe_url(result.url, allow_private=allow_private)
             return result
     return probe_native(
-        checked,
+        url,
         timeout,
         follow_redirects,
         user_agent,

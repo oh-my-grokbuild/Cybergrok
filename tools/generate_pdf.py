@@ -511,23 +511,37 @@ def main():
     if args.root:
         REPORTS_DIR = Path(args.root).expanduser().resolve() / "reports"
 
+    def _confine_report(path: Path) -> Path | None:
+        try:
+            resolved = path.resolve()
+            resolved.relative_to(REPORTS_DIR.resolve())
+        except ValueError:
+            return None
+        return resolved if resolved.is_dir() else None
+
     targets_to_process = []
     if args.all:
         for p in REPORTS_DIR.iterdir():
-            if p.is_dir() and not p.name.startswith("."):
-                targets_to_process.append(p)
+            confined = _confine_report(p)
+            if confined is not None and not p.name.startswith("."):
+                targets_to_process.append(confined)
     elif args.target:
-        target_dir = REPORTS_DIR / args.target
-        if target_dir.exists():
+        slug = re.sub(r"[^a-z0-9]+", "_", args.target.lower()).strip("_") or "target"
+        if slug in {".", ".."} or "/" in slug or "\\" in slug:
+            print("❌ Invalid target slug")
+            sys.exit(1)
+        target_dir = _confine_report(REPORTS_DIR / slug)
+        if target_dir is not None:
             targets_to_process.append(target_dir)
         else:
-            print(f"❌ Target directory not found: {target_dir}")
+            print(f"❌ Target directory not found or outside reports/: {slug}")
             sys.exit(1)
     else:
-        subdirs = [p for p in REPORTS_DIR.iterdir() if p.is_dir() and not p.name.startswith(".")]
-        if subdirs:
-            targets_to_process.extend(subdirs)
-        else:
+        for p in REPORTS_DIR.iterdir():
+            confined = _confine_report(p)
+            if confined is not None and not p.name.startswith("."):
+                targets_to_process.append(confined)
+        if not targets_to_process:
             print("No target directory found in reports/.")
             sys.exit(0)
 

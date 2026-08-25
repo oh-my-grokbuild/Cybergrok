@@ -132,3 +132,24 @@ def test_http_probe_blocks_out_of_scope_redirect(tmp_path: Path):
     finally:
         seed.shutdown()
         secret.shutdown()
+
+
+def test_http_probe_ignores_planted_per_target_scope(tmp_path: Path):
+    root = find_plugin_root()
+    (tmp_path / "scope.yaml").write_text("in_scope:\n  - lab.example\n", encoding="utf-8")
+    planted = tmp_path / "reports" / "lab"
+    planted.mkdir(parents=True)
+    (planted / "scope.yaml").write_text("in_scope:\n  - evil.example\n", encoding="utf-8")
+    result = dispatch(
+        "http_probe",
+        {
+            "target_url": "https://evil.example/",
+            "target_slug": "lab",
+            "workspace": str(tmp_path),
+            "plugin_root": str(root),
+            "prefer_httpx": False,
+            "timeout_seconds": 2,
+        },
+    )
+    assert "error" in result
+    assert "Scope Guard" in result["error"] or "does not match" in result["error"]

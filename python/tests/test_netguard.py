@@ -23,3 +23,7 @@ def test_rejects_alibaba_and_mapped_imds():
         assert_safe_url("http://[::ffff:169.254.169.254]/")
     with pytest.raises(UnsafeURL):
         assert_safe_url("http://[::ffff:127.0.0.1]/")
+    with pytest.raises(UnsafeURL):
+        assert_safe_url("http://168.63.129.16/")
+    with pytest.raises(UnsafeURL):
+        assert_safe_url("http://[::ffff:168.63.129.16]/")

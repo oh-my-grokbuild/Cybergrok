@@ -109,9 +109,18 @@ def scan_file(path: str | Path) -> list[Finding]:
     return scan_text(data, str(p))
 
 
-def scan_directory(dir_path: str | Path, max_workers: int = 8) -> list[Finding]:
+def scan_directory(dir_path: str | Path, max_workers: int = 8, confine_to: str | Path | None = None) -> list[Finding]:
     root = Path(dir_path)
-    files = [p for p in root.rglob("*") if p.is_file()]
+    bound = Path(confine_to).resolve() if confine_to is not None else root.resolve()
+    files: list[Path] = []
+    for p in root.rglob("*"):
+        if not p.is_file():
+            continue
+        try:
+            p.resolve().relative_to(bound)
+        except ValueError:
+            continue
+        files.append(p)
     findings: list[Finding] = []
     workers = max(1, max_workers)
     with ThreadPoolExecutor(max_workers=workers) as pool:

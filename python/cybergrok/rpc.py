@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from . import crawl, probe, report, scope, search, secrets, skills
@@ -19,6 +20,9 @@ def _plugin_root(args: dict) -> Path:
 
 
 def _workspace(args: dict) -> Path:
+    pinned = os.environ.get("GROK_WORKSPACE_ROOT") or os.environ.get("CYBERGROK_WORKSPACE")
+    if pinned:
+        return Path(pinned).expanduser().resolve()
     raw = args.get("workspace") or args.get("root")
     if raw:
         return Path(raw).expanduser().resolve()
@@ -107,7 +111,10 @@ def dispatch(op: str, args: dict | None = None) -> dict:
                 return {"error": str(exc)}
             if not (_under(target, wdirs["recon"]) or _under(target, wdirs["reports"])):
                 return {"error": "scan_secrets path must be under the workspace recon/ or reports/ tree"}
-            findings = secrets.scan_directory(target) if target.is_dir() else secrets.scan_file(target)
+            if target.is_dir():
+                findings = secrets.scan_directory(target, confine_to=target)
+            else:
+                findings = secrets.scan_file(target)
         else:
             return {"error": "Either content or path is required"}
         filtered = secrets.filter_by_severity(findings, args.get("min_severity") or "low")
@@ -181,7 +188,7 @@ def dispatch(op: str, args: dict | None = None) -> dict:
                 timeout=int(args.get("timeout_seconds") or 30),
                 tools_dir=pdirs["tools"],
                 output_dir=recon_dir,
-                prefer_katana=bool(args.get("prefer_katana")),
+                prefer_katana=False,
                 allow_private=allow_private,
                 guard=lambda url: _guard_url(url, cfg),
             )
@@ -192,7 +199,7 @@ def dispatch(op: str, args: dict | None = None) -> dict:
     if op == "aggregate_report":
         raw_slug = (args.get("target_slug") or "").strip()
         if not raw_slug or raw_slug.lower() == "all":
-            results = report.aggregate_all(wdirs["reports"])
+            results = report.aggregate_all(wdirs["reports"], confine_to=workspace)
             return {"results": [r.to_dict() for r in results]}
         try:
             slug = _safe_slug(raw_slug)

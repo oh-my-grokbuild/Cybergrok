@@ -88,27 +88,17 @@ def _confine_under(path: Path, root: Path) -> Path | None:
 
 
 def find_scope_config(root_dir: Path, target_slug: str = "") -> tuple[ScopeConfig | None, Path | None]:
-    """Return (config, path). Raises ScopeError if a candidate exists but is unreadable.
+    """Return workspace scope.yaml only.
 
-    The first existing candidate is the policy. A broken per-target file does
-    not fall through to the workspace file.
+    Per-target reports/<slug>/scope.yaml is not an allowlist — agents can write it.
+    `target_slug` is accepted for call-site compatibility and ignored.
     """
+    del target_slug
     root = Path(root_dir).resolve()
-    candidates: list[Path] = []
-    slug = (target_slug or "").strip()
-    if slug:
-        cleaned = re.sub(r"[^a-z0-9]+", "_", slug.lower()).strip("_")
-        if cleaned and cleaned not in {".", ".."} and "/" not in cleaned and "\\" not in cleaned:
-            reports = root / "reports"
-            for name in ("scope.yaml", "scope.yml"):
-                confined = _confine_under(reports / cleaned / name, reports)
-                if confined is not None:
-                    candidates.append(confined)
-    candidates += [root / "scope.yaml", root / "scope.yml"]
-    for path in candidates:
-        if not path.is_file():
-            continue
-        return parse_scope_file(path), path
+    for name in ("scope.yaml", "scope.yml"):
+        path = root / name
+        if path.is_file():
+            return parse_scope_file(path), path
     return None, None
 
 
@@ -176,35 +166,70 @@ def host_is_private_literal(host: str) -> bool:
 
 
 def allow_private_for_target(raw_target: str, cfg: ScopeConfig | None) -> bool:
-    """Private/loopback hops are allowed only when that hop itself is in scope."""
-    result = validate_target(raw_target, cfg)
-    return bool(result.allowed and host_is_private_literal(result.host))
+    """In-scope hops may resolve to RFC1918/loopback. IMDS stays blocked in netguard."""
+    return bool(validate_target(raw_target, cfg).allowed)
 
 
-def _matches_host(host: str, port: str, rule_host: str) -> bool:
+def _effective_ports(scheme: str, port: str) -> set[str]:
+    if port:
+        return {port}
+    if scheme == "https":
+        return {"443"}
+    if scheme == "http":
+        return {"80"}
+    return set()
+
+
+def _is_open_rule(rule: str) -> bool:
+    r = rule.strip().lower()
+    return r in {"*", "0.0.0.0/0", "::/0", "^.*$", ".*", ".+", "^", "$"}
+
+
+def _host_matches_name(host: str, rule_host: str) -> bool:
     rule_host = rule_host.lower()
     if rule_host.startswith("*."):
         root = rule_host[2:]
         return host == root or host.endswith("." + root)
-    if port and f"{host}:{port}" == rule_host:
-        return True
     return host == rule_host
 
 
-def _matches_rule(host: str, port: str, path: str, raw_target: str, rule: str, *, path_only: bool = False) -> bool:
+def _matches_host(host: str, ports: set[str], rule_host: str, *, host_only: bool) -> bool:
+    rule_host = rule_host.lower()
+    if ":" in rule_host and not rule_host.startswith("[") and not rule_host.startswith("*."):
+        name, _, maybe_port = rule_host.rpartition(":")
+        if name and maybe_port.isdigit():
+            return _host_matches_name(host, name) and maybe_port in ports
+    if not _host_matches_name(host, rule_host):
+        return False
+    if host_only:
+        return bool(ports & {"80", "443"})
+    return True
+
+
+def _matches_rule(
+    host: str,
+    ports: set[str],
+    path: str,
+    raw_target: str,
+    rule: str,
+    *,
+    path_only: bool = False,
+) -> bool:
     rule = rule.lower().strip()
     host = host.lower()
-    if not rule or rule == "*":
+    if not rule or _is_open_rule(rule):
         return False
 
     split = _split_host_path_rule(rule)
     if split:
         r_host, r_path = split
-        return _matches_host(host, port, r_host) and _path_prefix_ok(path, r_path)
+        return _matches_host(host, ports, r_host, host_only=True) and _path_prefix_ok(path, r_path)
 
     if "/" in rule and "://" not in rule:
         try:
             net = ipaddress.ip_network(rule, strict=False)
+            if net.prefixlen == 0:
+                return False
             ip = ipaddress.ip_address(host)
             return ip in net
         except ValueError:
@@ -212,34 +237,31 @@ def _matches_rule(host: str, port: str, path: str, raw_target: str, rule: str, *
 
     try:
         if ipaddress.ip_address(host).compressed == rule:
-            return True
+            return bool(ports & {"80", "443"})
     except ValueError:
         pass
 
     if "://" in rule:
         try:
-            _, r_host, r_port, r_path = normalize_target(rule)
-            if _matches_host(host, port, r_host) and (not r_port or port == r_port):
+            r_scheme, r_host, r_port, r_path = normalize_target(rule)
+            rule_ports = _effective_ports(r_scheme, r_port)
+            if _host_matches_name(host, r_host) and (ports & rule_ports):
                 return _path_prefix_ok(path, r_path)
         except ValueError:
             return False
 
     if rule.startswith("/"):
-        # Path-only rules never authorize a host by themselves.
         return path_only and _path_prefix_ok(path, rule)
 
     if rule.startswith("*."):
-        return _matches_host(host, port, rule)
+        return _matches_host(host, ports, rule, host_only=True)
 
-    if host == rule:
-        return True
-    if port and f"{host}:{port}" == rule:
+    if _matches_host(host, ports, rule, host_only=":" not in rule):
         return True
     if rule.startswith("^") or rule.endswith("$"):
         try:
             cre = re.compile(rule)
-            # Match host only — a pattern like ^https?:// must not authorize every URL.
-            return bool(cre.search(host) or (port and cre.search(f"{host}:{port}")))
+            return bool(cre.fullmatch(host))
         except re.error:
             return False
     return False
@@ -247,9 +269,10 @@ def _matches_rule(host: str, port: str, path: str, raw_target: str, rule: str, *
 
 def validate_target(raw_target: str, cfg: ScopeConfig | None) -> ValidationResult:
     try:
-        _, host, port, path = normalize_target(raw_target)
+        scheme, host, port, path = normalize_target(raw_target)
     except ValueError as exc:
         return ValidationResult(False, raw_target, reason=f"Invalid target format: {exc}", scope_found=cfg is not None)
+    ports = _effective_ports(scheme, port)
 
     if cfg is None:
         return ValidationResult(
@@ -263,7 +286,7 @@ def validate_target(raw_target: str, cfg: ScopeConfig | None) -> ValidationResul
         )
 
     for out_rule in cfg.out_of_scope:
-        if _matches_rule(host, port, path, raw_target, out_rule, path_only=True):
+        if _matches_rule(host, ports, path, raw_target, out_rule, path_only=True):
             return ValidationResult(
                 False,
                 raw_target,
@@ -288,10 +311,10 @@ def validate_target(raw_target: str, cfg: ScopeConfig | None) -> ValidationResul
         )
 
     for in_rule in host_rules:
-        if _matches_rule(host, port, path, raw_target, in_rule, path_only=False):
+        if _matches_rule(host, ports, path, raw_target, in_rule, path_only=False):
             # Optional extra path-only constraints
             path_rules = [r.strip() for r in cfg.in_scope if str(r).strip().startswith("/")]
-            if path_rules and not any(_matches_rule(host, port, path, raw_target, r, path_only=True) for r in path_rules):
+            if path_rules and not any(_matches_rule(host, ports, path, raw_target, r, path_only=True) for r in path_rules):
                 continue
             return ValidationResult(
                 True,

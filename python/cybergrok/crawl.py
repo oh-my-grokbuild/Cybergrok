@@ -14,7 +14,7 @@ from collections.abc import Callable
 from urllib.parse import urljoin, urlparse
 from urllib.request import HTTPSHandler, Request, build_opener
 
-from .netguard import UnsafeURL, assert_safe_url
+from .netguard import UnsafeURL, assert_safe_url, prepare_safe_request
 from .probe import GuardedRedirectHandler
 from .stream import score_line
 
@@ -66,8 +66,9 @@ def _resolve(base: str, ref: str) -> str:
     return urljoin(base, ref)
 
 
-def _fetch(opener, url: str, user_agent: str, timeout: int) -> str:
-    req = Request(url, headers={"User-Agent": user_agent})
+def _fetch(opener, url: str, user_agent: str, timeout: int, allow_private: bool = False) -> str:
+    fetch, host_hdr = prepare_safe_request(url, allow_private=allow_private)
+    req = Request(fetch, headers={"User-Agent": user_agent, "Host": host_hdr})
     try:
         with opener.open(req, timeout=min(5, timeout)) as resp:
             return resp.read(512 * 1024).decode("utf-8", errors="ignore")
@@ -96,8 +97,10 @@ def _same_origin(left: str, right: str) -> bool:
 
 def _check(url: str, allow_private: bool, guard: Callable[[str], str] | None) -> str:
     if guard:
-        return guard(url)
-    return assert_safe_url(url, allow_private=allow_private)
+        guard(url)
+    else:
+        assert_safe_url(url, allow_private=allow_private)
+    return url
 
 
 def _native_crawl(
@@ -128,7 +131,7 @@ def _native_crawl(
             except (UnsafeURL, ValueError):
                 continue
             visited.add(cur)
-            body = _fetch(opener, cur, user_agent, timeout)
+            body = _fetch(opener, cur, user_agent, timeout, allow_private=allow_private)
             if not body:
                 continue
             for m in HREF_RE.finditer(body):
@@ -170,15 +173,9 @@ def crawl_target(
     started = time.monotonic()
     engine = "native_python"
     raw: list[str] = []
-    # Katana fetches before we can apply per-URL scope. Keep it opt-in only.
-    if prefer_katana:
-        binary = find_katana(tools_dir)
-        if binary:
-            raw = _run_katana(seed, depth, timeout, binary)
-            if raw:
-                engine = "katana"
-    if not raw:
-        raw = _native_crawl(seed, depth, timeout, user_agent, allow_private=allow_private, guard=guard)
+    # Katana fetches before per-URL scope/netguard. Never invoke it.
+    del prefer_katana
+    raw = _native_crawl(seed, depth, timeout, user_agent, allow_private=allow_private, guard=guard)
 
     unique: dict[str, int] = {}
     for ep in raw:

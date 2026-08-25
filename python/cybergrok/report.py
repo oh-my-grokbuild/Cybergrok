@@ -246,14 +246,20 @@ def aggregate_target(target_dir: Path) -> SummaryData:
     return data
 
 
-def aggregate_all(reports_dir: Path) -> list[SummaryData]:
-    reports_dir = Path(reports_dir)
+def aggregate_all(reports_dir: Path, confine_to: Path | None = None) -> list[SummaryData]:
+    reports_dir = Path(reports_dir).resolve()
     results: list[SummaryData] = []
     if not reports_dir.is_dir():
         return results
+    bound = Path(confine_to).resolve() if confine_to is not None else reports_dir
     for child in sorted(reports_dir.iterdir()):
-        if child.is_dir():
-            results.append(aggregate_target(child))
+        if not child.is_dir():
+            continue
+        try:
+            child.resolve().relative_to(bound)
+        except ValueError:
+            continue
+        results.append(aggregate_target(child))
     return results
 
 

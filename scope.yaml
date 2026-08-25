@@ -5,6 +5,7 @@ allow_ips: false
 
 # Fail-closed: only these hosts may be probed/crawled.
 # Add the operator-approved engagement hostname before an assessment.
+# Host-only rules match ports 80 and 443. Use host:port for other ports.
 in_scope:
   - "127.0.0.1:8888"
   - "localhost:8888"
