@@ -168,8 +168,8 @@ Add to `~/.continue/config.json`:
         "name": "cybergrok",
         "transport": {
           "type": "stdio",
-          "command": "npx",
-          "args": ["-y", "cybergrok-mcp"]
+          "command": "node",
+          "args": ["mcp/launch.cjs"]
         }
       }
     ]
@@ -199,7 +199,7 @@ Add to `~/.config/zed/settings.json`:
 Run via CLI or add to `~/.claude.json`:
 
 ```bash
-claude mcp add cybergrok npx -- -y cybergrok-mcp
+claude mcp add cybergrok node -- mcp/launch.cjs
 ```
 Or in `~/.claude.json`:
 ```json
@@ -221,8 +221,8 @@ Add to `~/.grok/config.yaml` or `.grok/config.yaml`:
 ```yaml
 mcp_servers:
   cybergrok:
-    command: "npx"
-    args: ["-y", "cybergrok-mcp"]
+    command: "node"
+    args: ["mcp/launch.cjs"]
 ```
 
 ---
@@ -232,8 +232,8 @@ Add to `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.cybergrok]
-command = "npx"
-args = ["-y", "cybergrok-mcp"]
+command = "node"
+args = ["mcp/launch.cjs"]
 ```
 
 ---
@@ -254,22 +254,14 @@ Add to your Antigravity MCP settings or configuration JSON:
 
 ---
 
-## 🛠️ Method 2: Direct Native Go Binary (Offline / Air-Gapped / Enterprise)
+## 🛠️ Method 2: Absolute path to launch.cjs (offline / air-gapped)
 
-If you have cloned the Cybergrok repository or want to run the native pre-compiled Go binary directly without Node.js/npx:
-
-### 1. Build Local Binary
-```bash
-go build -o tools/bin/cybergrok-mcp.exe ./cmd/cybergrok-mcp
-```
-
-### 2. Configure Client with Absolute Path (Windows Example)
 ```json
 {
   "mcpServers": {
     "cybergrok": {
-      "command": "C:\\path\\to\\Cybergrok\\tools\\bin\\cybergrok-mcp.exe",
-      "args": ["-workspace", "C:\\path\\to\\Cybergrok"]
+      "command": "node",
+      "args": ["C:\\\\path\\\\to\\\\Cybergrok\\\\mcp\\\\launch.cjs"]
     }
   }
 }

@@ -72,20 +72,16 @@ VS Code or host text editor reports `Unable to open file (NoPermissions (FileSys
 
 ---
 
-## 5. High-Performance Go Core Tools (`tools/bin/*`) Missing or Architecture Mismatch
+## 5. Python CLIs (`smart_pipe`, `secret_scan`, …) missing
 
 ### Symptoms:
-Running `smart_pipe`, `search_knowledge`, `secret_scan`, or `aggregate_reports` returns `command not found` or `cannot execute binary file: Exec format error`.
+Running `smart_pipe`, `search_knowledge`, `secret_scan`, or `aggregate_reports` returns `command not found`.
 
 ### Resolutions:
-1. **Rebuild all Go tools locally**:
-   Ensure you have Go installed (`go version`), then recompile directly from the root workspace:
+1. **Install the Python package**:
    ```bash
-   go build -ldflags="-s -w" -o tools/bin/smart_pipe ./cmd/smart_pipe
-   go build -ldflags="-s -w" -o tools/bin/secret_scan ./cmd/secret_scan
-   go build -ldflags="-s -w" -o tools/bin/search_knowledge ./cmd/search_knowledge
-   go build -ldflags="-s -w" -o tools/bin/aggregate_reports ./cmd/aggregate_reports
-   chmod +x tools/bin/*
+   ./setup.sh
+   source venv/bin/activate
    ```
 2. **Ensure `tools/bin` is in your `$PATH`**:
    Source the environment loader:
