@@ -50,7 +50,6 @@ reports/<TARGET_SLUG>/
 Python CLIs (`smart_pipe`, `secret_scan`, `search_knowledge`, `aggregate_reports`)
 are installed by `./setup.sh` into the project venv. ProjectDiscovery binaries
 live in `tools/bin/` and should be on `PATH` when launched via `./cybergrok`.
-The MCP server is TypeScript (`mcp/`) launched by `scripts/cybergrok-mcp.sh`.
 
 | Tool | Purpose |
 | :--- | :--- |
@@ -64,7 +63,6 @@ The MCP server is TypeScript (`mcp/`) launched by `scripts/cybergrok-mcp.sh`.
 | secret_scan | 48-pattern secret miner |
 | search_knowledge | Offline payload search |
 | aggregate_reports | SUMMARY.md + metadata.json |
-| cybergrok-mcp | Native MCP (10 tools) |
 
 Optional: sqlmap, dalfox, nmap — install on the host if needed. They are not
 vendored in this plugin.
@@ -84,5 +82,5 @@ Do not nest subagents. Slash commands: `/assess`, `/recon`, `/cybergrok-hunt`,
 
 - **429** — back off 1–3s, drop `-t` / `-rate`.
 - **403 / WAF** — `tools/wordlists/bypass-headers.txt`, path normalization.
-- **Missing binary** — fall back to Python `requests` / `urllib` / MCP probe
+- **Missing binary** — fall back to Python `requests` / `urllib` probe
   tools. Do not abort the session.

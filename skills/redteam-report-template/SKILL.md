@@ -264,7 +264,7 @@ Beyond findings themselves, the deliverable should include:
 - Detected SOC responses (timestamps when defenses kicked in)
 - Concurrent external attacker activity (if any was observed)
 - Findings the client patched during the engagement (with PoC pre-patch as evidence)
-- Tooling failures (e.g., MCP timeout, CAPTCHA not solvable) — these affect what was/wasn't testable
+- Tooling failures (e.g., probe timeout, CAPTCHA not solvable) — these affect what was/wasn't testable
 
 Each gives the client context about their real-world detection capability, which often matters more than the findings themselves.
 

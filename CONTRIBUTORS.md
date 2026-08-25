@@ -5,7 +5,7 @@ We would like to express our gratitude to everyone who helps build, research, ma
 ---
 
 ### 👑 Core Authors & Leads
-- Cybergrok maintainers — plugin, Python engine, TypeScript MCP, and Grok Build agent surface
+- Cybergrok maintainers — plugin, Python engine, and Grok Build agent surface
 
 ---
 

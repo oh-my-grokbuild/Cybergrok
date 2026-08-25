@@ -72,21 +72,42 @@ def list_skills(skills_dir: Path) -> list[SkillMetadata]:
     return skills
 
 
+def _skill_name_ok(name: str) -> bool:
+    raw = name.strip()
+    if not raw or raw in {".", ".."}:
+        return False
+    if Path(raw).is_absolute() or "/" in raw or "\\" in raw:
+        return False
+    return ".." not in Path(raw).parts
+
+
+def _confine_skill(path: Path, skills_dir: Path) -> Path | None:
+    try:
+        resolved = path.resolve()
+        _ = resolved.relative_to(skills_dir.resolve())
+    except ValueError:
+        return None
+    return resolved if resolved.is_file() else None
+
+
 def get_skill(skills_dir: Path, name: str, section: str = "") -> str | None:
+    if not _skill_name_ok(name):
+        return None
     needle = name.lower().strip()
     direct = skills_dir / name / "SKILL.md"
-    path = direct if direct.is_file() else None
+    path = _confine_skill(direct, skills_dir) if direct.is_file() else None
     if path is None:
         for skill_file in skills_dir.rglob("SKILL.md"):
             if skill_file.parent.name.lower() == needle:
-                path = skill_file
-                break
+                path = _confine_skill(skill_file, skills_dir)
+                if path is not None:
+                    break
     if path is None:
         for sk in list_skills(skills_dir):
             if sk.name.lower() == needle:
-                path = Path(sk.path)
+                path = _confine_skill(Path(sk.path), skills_dir)
                 break
-    if path is None or not path.is_file():
+    if path is None:
         return None
     content = path.read_text(encoding="utf-8", errors="ignore")
     if not section:

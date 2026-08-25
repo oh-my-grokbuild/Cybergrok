@@ -15,10 +15,10 @@ from pathlib import Path
 from typing import IO, NotRequired, TypedDict, override
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
-from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, Request
 
 from . import _coerce
-from .netguard import UnsafeURL, assert_safe_url, prepare_safe_request
+from .netguard import UnsafeURL, assert_safe_url, prepare_safe_request, safe_opener
 
 TITLE_RE = re.compile(r"(?i)<title[^>]*>([^<]+)</title>")
 
@@ -157,14 +157,10 @@ class GuardedRedirectHandler(HTTPRedirectHandler):
         try:
             if self.guard:
                 _ = self.guard(newurl)
-            fetch, host_hdr = prepare_safe_request(newurl, allow_private=self.allow_private)
+            _ = prepare_safe_request(newurl, allow_private=self.allow_private)
         except (UnsafeURL, ValueError) as exc:
             raise HTTPError(newurl, code, f"blocked redirect: {exc}", headers, fp) from exc
-        nxt = super().redirect_request(req, fp, code, msg, headers, fetch)
-        if nxt is not None:
-            nxt.add_unredirected_header("Host", host_hdr)
-            nxt.headers["Host"] = host_hdr
-        return nxt
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 def extract_title(html: str) -> str:
@@ -236,15 +232,13 @@ def probe_httpx(
     if follow_redirects:
         return None
     try:
-        fetch, host_hdr = prepare_safe_request(url, allow_private=allow_private)
+        _ = prepare_safe_request(url, allow_private=allow_private)
     except UnsafeURL:
         return None
     args = [
         binary,
         "-u",
-        fetch,
-        "-H",
-        f"Host: {host_hdr}",
+        url,
         "-silent",
         "-status-code",
         "-title",
@@ -271,7 +265,7 @@ def probe_httpx(
         tls = _coerce.as_str_map(data.get("tls"))
         technologies = _coerce.as_str_list(data.get("tech"))
         return ProbeResult(
-            url=_json_str(data, "url", url),
+            url=url,
             scheme=_json_str(data, "scheme"),
             host=_json_str(data, "host"),
             port=str(data.get("port") or ""),
@@ -305,15 +299,17 @@ def probe_native(
 ) -> ProbeResult:
     if guard:
         _ = guard(url)
-    fetch, host_hdr = prepare_safe_request(url, allow_private=allow_private)
+    _ = prepare_safe_request(url, allow_private=allow_private)
     raw = url
     parsed = urlparse(raw)
     ctx = _tls_context(insecure_tls)
     handler = GuardedRedirectHandler(
         allow_private=allow_private, follow=follow_redirects, guard=guard
     )
-    opener = build_opener(handler, HTTPSHandler(context=ctx))
-    req = Request(fetch, headers={"User-Agent": user_agent, "Accept": "*/*", "Host": host_hdr})
+    opener = safe_opener(
+        allow_private=allow_private, context=ctx, extra_handlers=(handler,), guard=guard
+    )
+    req = Request(url, headers={"User-Agent": user_agent, "Accept": "*/*"})
     started = time.monotonic()
     body = ""
     headers: dict[str, str] = {}

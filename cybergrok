@@ -45,7 +45,7 @@ done
 if [ "$user_passed_agent" -eq 0 ]; then
   GROK_ARGS+=(--agent "${AGENT_FILE}")
 fi
-# Folder trust unlocks project plugins, hooks, and repo-local MCP.
+# Folder trust unlocks project plugins and hooks.
 GROK_ARGS+=(--trust)
 
 exec grok "${GROK_ARGS[@]}" "$@"

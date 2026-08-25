@@ -47,8 +47,6 @@ Passive recon → Active probe → Skill execution → PoC validation
 
 - You (Cybergrok) stay primary.
 - Spawn `recon-scout` / `vuln-hunter` / `reporter` only for bounded slices.
-- MCP: `cybergrok_list_skills`, `cybergrok_get_skill`, `cybergrok_search_knowledge`,
-  `cybergrok_http_probe`, `cybergrok_recon_crawl`, `cybergrok_record_finding`.
 - Knowledge search: `search_knowledge "<query>" --limit 3`.
 
 See also `skills/autonomous-godmode-hunter/SKILL.md` for the longer SOP.

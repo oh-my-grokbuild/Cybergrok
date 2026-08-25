@@ -35,7 +35,7 @@ disable-model-invocation: true
      - Auth & Session Handling (Dual-account matrix)
      - IDOR / BOLA / Mass-Assignment Testing
      - Injection Vectors (SQLi, SSTI, Command Injection)
-     - Client-side Flaws (DOM XSS, CORS, CSRF via Puppeteer MCP)
+     - Client-side Flaws (DOM XSS, CORS, CSRF via Playwright)
      - SSRF & OOB Interaction Testing
                               │
                               ▼
@@ -57,7 +57,7 @@ disable-model-invocation: true
 - **Fuzzing**: `ffuf -u <url>/FUZZ -w tools/wordlists/common.txt -mc 200,301,302,403`
 - **XSS Analysis**: `dalfox url <url> --silence`
 - **SQLi Verification**: `sqlmap -u "<url>?param=1" --batch --banner`
-- **Browser Automation**: Use MCP tools (`puppeteer_navigate`, `puppeteer_screenshot`, `puppeteer_evaluate`) for dynamic JavaScript and DOM verification.
+- **Browser Automation**: Use Playwright for dynamic JavaScript and DOM verification.
 
 ## 4. Verification Checkpoint Matrix
 
@@ -66,7 +66,7 @@ disable-model-invocation: true
 | **IDOR / BOLA** | Cross-tenant access between Account A & B | Both Request/Response pairs with leaked object |
 | **Auth Bypass** | Accessing protected endpoint without valid credentials | Response payload showing privileged view |
 | **SQL Injection** | DBMS version or deterministic differential response | Database banner or timing difference proof |
-| **XSS / DOM Flaw** | Script execution context or DOM sink manipulation | Browser MCP console logs / DOM snapshot |
+| **XSS / DOM Flaw** | Script execution context or DOM sink manipulation | Browser console logs / DOM snapshot |
 | **SSRF** | Server-side request callback or internal metadata fetch | Raw response headers and body |
 
 ## 5. Target-Scoped Output Hierarchy & Deliverables

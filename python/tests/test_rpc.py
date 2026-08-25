@@ -142,6 +142,50 @@ def test_http_probe_blocks_out_of_scope_redirect(tmp_path: Path):
         secret.shutdown()
 
 
+def test_http_probe_string_false_does_not_follow_redirect(tmp_path: Path):
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            if self.path == "/go":
+                _ = self.send_response(302)
+                _ = self.send_header("Location", "http://169.254.169.254/latest/meta-data")
+                self.end_headers()
+                return
+            _ = self.send_response(200)
+            self.end_headers()
+            _ = self.wfile.write(b"ok")
+
+        @override
+        def log_message(self, format: str, *args: object) -> None:
+            return
+
+    seed = HTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=seed.serve_forever, daemon=True)
+    thread.start()
+    try:
+        seed_port = int(seed.server_address[1])
+        _ = (tmp_path / "scope.yaml").write_text(
+            f"in_scope:\n  - 127.0.0.1:{seed_port}\n",
+            encoding="utf-8",
+        )
+        result = dispatch(
+            "http_probe",
+            {
+                "target_url": f"http://127.0.0.1:{seed_port}/go",
+                "workspace": str(tmp_path),
+                "plugin_root": str(find_plugin_root()),
+                "follow_redirects": "false",
+                "prefer_httpx": False,
+                "timeout_seconds": 3,
+            },
+        )
+        assert "error" not in result
+        assert int(str(result.get("status_code") or 0)) == 302
+        assert "SECRET" not in str(result)
+        assert "169.254.169.254" not in str(result.get("final_url") or "")
+    finally:
+        seed.shutdown()
+
+
 def test_http_probe_ignores_planted_per_target_scope(tmp_path: Path):
     root = find_plugin_root()
     _ = (tmp_path / "scope.yaml").write_text("in_scope:\n  - lab.example\n", encoding="utf-8")

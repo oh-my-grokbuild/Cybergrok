@@ -1,4 +1,4 @@
-"""JSON RPC used by the TypeScript MCP server."""
+"""JSON RPC used by `python -m cybergrok rpc`."""
 
 from __future__ import annotations
 
@@ -49,7 +49,14 @@ def _arg_int(args: RpcArgs, key: str, default: int) -> int:
 
 
 def _arg_bool(args: RpcArgs, key: str) -> bool:
-    return bool(args.get(key))
+    value = args.get(key)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    if isinstance(value, int):
+        return value != 0
+    return bool(value)
 
 
 def _as_object_map(value: object) -> dict[str, object]:

@@ -42,10 +42,9 @@ validate exploits with deterministic proof, and write structured reports.
 2. **Active probe** — `httpx`, `katana`, `ffuf` via `smart_pipe`, only
    against workspace `scope.yaml` `in_scope` hosts.
 3. **Skill execution** — pick playbooks from `skills/` (`hunt-idor`,
-   `hunt-xss`, `jwt-oauth-token-attacks`, …) or MCP
-   `cybergrok_list_skills` / `cybergrok_get_skill`.
+   `hunt-xss`, `jwt-oauth-token-attacks`, …).
 4. **PoC validation** — minimal Python `requests` scripts, `timeout=10`.
-5. **Secret mining** — `secret_scan` or `cybergrok_scan_secrets` on JS/dumps.
+5. **Secret mining** — `secret_scan` on JS/dumps.
 6. **Reporting** — write findings, then `aggregate_reports <SLUG>` and optional
    `python3 tools/generate_pdf.py <SLUG>`.
 
@@ -84,14 +83,9 @@ If the unprefixed type is unknown, use `cybergrok:recon-scout`.
 
 Prefer native binaries on `tools/bin` (after `./setup.sh` or `./cybergrok`):
 `smart_pipe`, `secret_scan`, `search_knowledge`, `aggregate_reports`,
-`cybergrok-mcp`, plus ProjectDiscovery (`subfinder`, `httpx`, `katana`, `nuclei`)
-when installed.
-
-MCP (after the plugin is trusted): `cybergrok_validate_scope`,
-`cybergrok_http_probe`, `cybergrok_recon_crawl`, `cybergrok_search_knowledge`,
-`cybergrok_list_skills`, `cybergrok_get_skill`, `cybergrok_scan_secrets`,
-`cybergrok_record_finding`, `cybergrok_list_findings`,
-`cybergrok_aggregate_report`.
+plus ProjectDiscovery (`subfinder`, `httpx`, `katana`, `nuclei`)
+when installed. Python operations are also available via
+`python -m cybergrok rpc`.
 
 ## Done
 

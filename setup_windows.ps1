@@ -4,7 +4,7 @@ Set-Location $Root
 $GrokHome = if ($env:GROK_HOME) { $env:GROK_HOME } else { Join-Path $env:USERPROFILE ".grok" }
 $AgentNames = @("cybergrok", "recon-scout", "vuln-hunter", "reporter")
 
-Write-Host "Cybergrok Windows setup (Grok Build + Python + TypeScript)"
+Write-Host "Cybergrok Windows setup (Grok Build + Python)"
 
 if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
     Write-Error "Python 3.10+ is required."
@@ -34,17 +34,7 @@ Install-GrokAgents -Dest (Join-Path $GrokHome "agents") -Label "user"
 $plugin = Join-Path $Root ".grok\plugins\cybergrok"
 New-Item -ItemType Directory -Force -Path $plugin | Out-Null
 Copy-Item (Join-Path $Root "plugin.json") (Join-Path $plugin "plugin.json") -Force
-@'
-{
-  "mcpServers": {
-    "cybergrok": {
-      "command": "node",
-      "args": ["${GROK_PLUGIN_ROOT}/mcp/launch.cjs"]
-    }
-  }
-}
-'@ | Set-Content -Path (Join-Path $plugin ".mcp.json") -Encoding utf8
-foreach ($name in @("agents", "commands", "hooks", "skills", "scripts", "mcp", "python", "AGENTS.md", "knowledge", "templates")) {
+foreach ($name in @("agents", "commands", "hooks", "skills", "scripts", "python", "AGENTS.md", "knowledge", "templates")) {
     $src = Join-Path $Root $name
     $dest = Join-Path $plugin $name
     if (Test-Path $src) {
@@ -58,13 +48,6 @@ if (-not (Test-Path "$Root\venv")) {
 }
 & "$Root\venv\Scripts\python.exe" -m pip install --upgrade pip
 & "$Root\venv\Scripts\pip.exe" install -e "$Root"
-
-if (Get-Command npm -ErrorAction SilentlyContinue) {
-    Push-Location "$Root\mcp"
-    npm install
-    npm run build
-    Pop-Location
-}
 
 if (-not (Test-Path "$Root\.env") -and (Test-Path "$Root\.env.example")) {
     Copy-Item "$Root\.env.example" "$Root\.env"
@@ -80,8 +63,7 @@ if (Get-Command grok -ErrorAction SilentlyContinue) {
     if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
     New-Item -ItemType Directory -Force -Path $stage | Out-Null
     Copy-Item (Join-Path $Root "plugin.json") (Join-Path $stage "plugin.json")
-    Copy-Item (Join-Path $plugin ".mcp.json") (Join-Path $stage ".mcp.json")
-    foreach ($name in @("agents", "commands", "hooks", "skills", "scripts", "mcp", "python", "AGENTS.md", "knowledge", "templates")) {
+    foreach ($name in @("agents", "commands", "hooks", "skills", "scripts", "python", "AGENTS.md", "knowledge", "templates")) {
         $src = Join-Path $Root $name
         if (Test-Path $src) { Copy-Item $src (Join-Path $stage $name) -Recurse -Force }
     }

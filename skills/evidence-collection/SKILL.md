@@ -66,8 +66,8 @@ Content-Type: application/json
 {"status": "success", "id": 1234}
 ```
 
-### 3. Visual Browser Evidence (Browser MCP)
-When verifying client-side or UI vulnerabilities (DOM XSS, CSRF, sensitive page exposure), capture a screenshot via Browser MCP:
+### 3. Visual Browser Evidence
+When verifying client-side or UI vulnerabilities (DOM XSS, CSRF, sensitive page exposure), capture a screenshot with Playwright:
 ```bash
 # Saved to: /workspace/reports/evidence/<target>/<finding_id>/screenshot.png
 ```

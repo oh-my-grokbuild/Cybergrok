@@ -2,9 +2,23 @@
 
 from __future__ import annotations
 
+import http.client
 import ipaddress
 import socket
-from urllib.parse import urlparse, urlunparse
+import ssl
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import final, override
+from urllib.parse import urlparse
+from urllib.request import (
+    BaseHandler,
+    HTTPHandler,
+    HTTPSHandler,
+    OpenerDirector,
+    ProxyHandler,
+    Request,
+    build_opener,
+)
 
 ALLOWED_SCHEMES = {"http", "https"}
 IMDS_HOSTS = {
@@ -26,6 +40,17 @@ IMDS_NETWORKS = (
 
 class UnsafeURL(ValueError):
     pass
+
+
+@dataclass(frozen=True)
+class SafeRequest:
+    """Checked request: keep the hostname URL, connect to the resolved IP."""
+
+    url: str
+    connect_host: str
+    port: int
+    host_header: str
+    server_name: str
 
 
 def normalize_http_url(raw: str) -> str:
@@ -66,16 +91,8 @@ def _is_blocked_ip(
     return None
 
 
-def _pin_url(target: str, ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> str:
-    parsed = urlparse(target)
-    ip = _canonical_ip(ip)
-    host = str(ip)
-    netloc = f"[{host}]" if ":" in host else host
-    if parsed.port:
-        netloc = f"{netloc}:{parsed.port}"
-    return urlunparse(
-        (parsed.scheme, netloc, parsed.path, parsed.params, parsed.query, parsed.fragment)
-    )
+def _format_connect_host(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> str:
+    return str(_canonical_ip(ip))
 
 
 def _checked_ips(
@@ -104,12 +121,11 @@ def _checked_ips(
 
 
 def assert_safe_url(raw: str, *, allow_private: bool = False) -> str:
-    target, _host = prepare_safe_request(raw, allow_private=allow_private)
-    return target
+    return prepare_safe_request(raw, allow_private=allow_private).url
 
 
-def prepare_safe_request(raw: str, *, allow_private: bool = False) -> tuple[str, str]:
-    """Return (pinned fetch URL, Host header). Connects to the checked IP only."""
+def prepare_safe_request(raw: str, *, allow_private: bool = False) -> SafeRequest:
+    """Check the URL, then connect to the resolved IP while keeping the hostname URL."""
     target = normalize_http_url(raw)
     parsed = urlparse(target)
     host = (parsed.hostname or "").lower()
@@ -125,6 +141,113 @@ def prepare_safe_request(raw: str, *, allow_private: bool = False) -> tuple[str,
         reason = _is_blocked_ip(literal_ip, allow_private)
         if reason:
             raise UnsafeURL(reason)
-        return target, host_header
-    ips = _checked_ips(host, port, allow_private)
-    return _pin_url(target, ips[0]), host_header
+        return SafeRequest(
+            url=target,
+            connect_host=_format_connect_host(literal_ip),
+            port=port,
+            host_header=host_header,
+            server_name=host,
+        )
+    ip = _checked_ips(host, port, allow_private)[0]
+    return SafeRequest(
+        url=target,
+        connect_host=_format_connect_host(ip),
+        port=port,
+        host_header=host_header,
+        server_name=host,
+    )
+
+
+@final
+class _PinnedHTTPSConnection(http.client.HTTPSConnection):
+    _server_hostname: str
+    _tls_context: ssl.SSLContext | None
+
+    def __init__(
+        self,
+        host: str,
+        port: int | None = None,
+        *,
+        server_hostname: str,
+        context: ssl.SSLContext | None = None,
+        timeout: float | None = None,
+    ) -> None:
+        super().__init__(host, port, timeout=timeout, context=context)
+        self._server_hostname = server_hostname
+        self._tls_context = context
+
+    @override
+    def connect(self) -> None:
+        http.client.HTTPConnection.connect(self)
+        context = self._tls_context or ssl.create_default_context()
+        sock = self.sock
+        if sock is None:
+            raise OSError("HTTP connection produced no socket")
+        self.sock = context.wrap_socket(sock, server_hostname=self._server_hostname)
+
+
+@final
+class SafeOpenHandler(BaseHandler):
+    """Per-request DNS pin: TCP to the checked IP, SNI/Host/geturl keep the hostname."""
+
+    allow_private: bool
+    _tls_context: ssl.SSLContext | None
+    guard: Callable[[str], str] | None
+
+    def __init__(
+        self,
+        *,
+        allow_private: bool,
+        context: ssl.SSLContext | None = None,
+        guard: Callable[[str], str] | None = None,
+    ) -> None:
+        self.allow_private = allow_private
+        self._tls_context = context
+        self.guard = guard
+
+    def http_open(self, req: Request) -> http.client.HTTPResponse:
+        return self._pinned_open(req, tls=False)
+
+    def https_open(self, req: Request) -> http.client.HTTPResponse:
+        return self._pinned_open(req, tls=True)
+
+    def _pinned_open(self, req: Request, *, tls: bool) -> http.client.HTTPResponse:
+        raw = req.get_full_url()
+        guard = self.guard
+        if callable(guard):
+            _ = guard(raw)
+        safe = prepare_safe_request(raw, allow_private=self.allow_private)
+        req.add_unredirected_header("Host", safe.host_header)
+        req.headers["Host"] = safe.host_header
+
+        def http_class(_host: str, **kwargs: object) -> http.client.HTTPConnection:
+            timeout = kwargs.get("timeout")
+            timeout_f = float(timeout) if isinstance(timeout, (int, float)) else None
+            if tls:
+                return _PinnedHTTPSConnection(
+                    safe.connect_host,
+                    safe.port,
+                    server_hostname=safe.server_name,
+                    context=self._tls_context,
+                    timeout=timeout_f,
+                )
+            return http.client.HTTPConnection(safe.connect_host, safe.port, timeout=timeout_f)
+
+        if tls:
+            return HTTPSHandler(context=self._tls_context).do_open(http_class, req)
+        return HTTPHandler().do_open(http_class, req)
+
+
+def safe_opener(
+    *,
+    allow_private: bool,
+    context: ssl.SSLContext | None = None,
+    extra_handlers: tuple[BaseHandler, ...] = (),
+    guard: Callable[[str], str] | None = None,
+) -> OpenerDirector:
+    handlers: list[BaseHandler] = [
+        ProxyHandler({}),
+        *extra_handlers,
+        SafeOpenHandler(allow_private=allow_private, context=context, guard=guard),
+    ]
+    return build_opener(*handlers)

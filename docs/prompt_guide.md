@@ -142,7 +142,7 @@ Perform an authorized vulnerability verification against https://{TARGET_URL}/ex
 ### Phase 6: Browser DOM Automation & Client-Side Flaws
 
 ```text
-Using the Browser MCP integration, conduct a client-side security assessment on https://{TARGET_URL}/dashboard:
+Using Playwright or a headless browser, conduct a client-side security assessment on https://{TARGET_URL}/dashboard:
 1. Launch headless Chromium browser and navigate through the target application flow.
 2. Inspect DOM sinks, event listeners, and source flows for Client-Side DOM XSS.
 3. Evaluate frame-ancestors and X-Frame-Options policies for Clickjacking susceptibility.

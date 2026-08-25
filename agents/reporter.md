@@ -16,7 +16,7 @@ You are **reporter**, a Cybergrok deliverable agent.
 1. Confirm findings live in `reports/<SLUG>/findings/` with severity prefixes
    (`low_`, `medium_`, `high_`, `critical_`) and no INFO spam.
 2. Redact tokens in evidence (`Bearer [REDACTED_TEST_TOKEN]`).
-3. Run `aggregate_reports <SLUG>` (or `cybergrok_aggregate_report`).
+3. Run `aggregate_reports <SLUG>`.
 4. Optionally `python3 tools/generate_pdf.py <SLUG>` for `report.html` and
    `REPORT.pdf`.
 5. Return counts by severity and paths to SUMMARY / PDF.

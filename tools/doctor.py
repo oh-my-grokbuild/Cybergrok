@@ -49,8 +49,14 @@ def check_python() -> tuple[int, int, int]:
     passed, warns, fails = 0, 0, 0
 
     py_ver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    print_status("ok", "Python Version", f"{py_ver} >= 3.14")
-    passed += 1
+    required = (3, 14)
+    current = (int(sys.version_info.major), int(sys.version_info.minor))
+    if current >= required:
+        print_status("ok", "Python Version", f"{py_ver} >= 3.14")
+        passed += 1
+    else:
+        print_status("fail", "Python Version", f"{py_ver} (Requires 3.14+)")
+        fails += 1
 
     in_venv = hasattr(sys, "real_prefix") or (
         hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix
@@ -116,11 +122,7 @@ def check_config(root_dir: Path, auto_fix: bool = False) -> tuple[int, int, int]
     agents = root_dir / "AGENTS.md"
     session_agent = root_dir / ".grok" / "agents" / "cybergrok.md"
     project_plugin = root_dir / ".grok" / "plugins" / "cybergrok" / "plugin.json"
-    mcp_entry = root_dir / "scripts" / "cybergrok-mcp.sh"
-    mcp_launch = root_dir / "mcp" / "launch.cjs"
     py_pkg = root_dir / "python" / "cybergrok" / "rpc.py"
-    ts_src = root_dir / "mcp" / "src" / "index.ts"
-    ts_dist = root_dir / "mcp" / "dist" / "index.js"
 
     for label, path in (
         ("plugin.json", plugin),
@@ -128,9 +130,6 @@ def check_config(root_dir: Path, auto_fix: bool = False) -> tuple[int, int, int]
         ("project plugin .grok/plugins/cybergrok", project_plugin),
         ("AGENTS.md", agents),
         ("Python core (python/cybergrok)", py_pkg),
-        ("TypeScript MCP source", ts_src),
-        ("MCP launch.cjs", mcp_launch),
-        ("MCP launcher", mcp_entry),
     ):
         if path.exists():
             print_status("ok", label, str(path.relative_to(root_dir)))
@@ -139,25 +138,11 @@ def check_config(root_dir: Path, auto_fix: bool = False) -> tuple[int, int, int]
             print_status("fail", label, "Missing")
             fails += 1
 
-    if ts_dist.is_file():
-        print_status("ok", "TypeScript MCP build", "mcp/dist/index.js")
-        passed += 1
-    else:
-        print_status("warn", "TypeScript MCP build", "Run: cd mcp && npm install && npm run build")
-        warns += 1
-
     if shutil.which("grok"):
         print_status("ok", "Grok Build CLI", "grok on PATH")
         passed += 1
     else:
         print_status("warn", "Grok Build CLI", "Not on PATH — install grok to run the agent")
-        warns += 1
-
-    if shutil.which("node"):
-        print_status("ok", "Node.js", shutil.which("node") or "")
-        passed += 1
-    else:
-        print_status("warn", "Node.js", "Needed to run cybergrok-mcp")
         warns += 1
 
     env_file = root_dir / ".env"

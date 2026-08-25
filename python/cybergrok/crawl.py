@@ -11,10 +11,10 @@ from pathlib import Path
 from typing import TypedDict
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
-from urllib.request import HTTPSHandler, OpenerDirector, Request, build_opener
+from urllib.request import OpenerDirector, Request
 
 from . import _coerce
-from .netguard import UnsafeURL, assert_safe_url, prepare_safe_request
+from .netguard import UnsafeURL, assert_safe_url, prepare_safe_request, safe_opener
 from .probe import GuardedRedirectHandler
 from .stream import score_line
 
@@ -58,8 +58,8 @@ def _resolve(base: str, ref: str) -> str:
 def _fetch(
     opener: OpenerDirector, url: str, user_agent: str, timeout: int, allow_private: bool = False
 ) -> str:
-    fetch, host_hdr = prepare_safe_request(url, allow_private=allow_private)
-    req = Request(fetch, headers={"User-Agent": user_agent, "Host": host_hdr})
+    _ = prepare_safe_request(url, allow_private=allow_private)
+    req = Request(url, headers={"User-Agent": user_agent})
     try:
         return _coerce.open_limited(opener, req, min(5, timeout), 512 * 1024)
     except HTTPError as exc:
@@ -99,9 +99,13 @@ def _native_crawl(
 ) -> list[str]:
     seed = _check(url, allow_private, guard)
     ctx = ssl.create_default_context()
-    opener = build_opener(
-        GuardedRedirectHandler(allow_private=allow_private, follow=False, guard=guard),
-        HTTPSHandler(context=ctx),
+    opener = safe_opener(
+        allow_private=allow_private,
+        context=ctx,
+        extra_handlers=(
+            GuardedRedirectHandler(allow_private=allow_private, follow=False, guard=guard),
+        ),
+        guard=guard,
     )
     visited: set[str] = set()
     endpoints: set[str] = set()

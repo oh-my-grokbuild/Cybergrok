@@ -4,14 +4,13 @@ Autonomous offensive security, bug bounty, and red-teaming **plugin for [Grok Bu
 
 Cybergrok is an autonomous offensive-security agent for **Grok Build**: 200+ hunt playbooks, a token-efficient recon pipeline, and structured reporting.
 
-The native engine is **Python + TypeScript** (no Go):
+The native engine is **Python** (no Go):
 
 | Layer | Language | Role |
 | :--- | :--- | :--- |
 | Grok Build | — | Agent runtime (`grok` CLI / TUI) |
 | Plugin | Markdown + hooks | Skills, agents, slash commands |
 | Core tools | **Python** | `smart_pipe`, `secret_scan`, `search_knowledge`, `aggregate_reports`, recon/probe/scope |
-| MCP server | **TypeScript** | `cybergrok-mcp` — 10 tools + 2 prompts over stdio |
 
 ---
 
@@ -35,7 +34,7 @@ Findings require raw request/response (or a differential). INFO noise goes to `e
 ```bash
 git clone <this-repo> Cybergrok
 cd Cybergrok
-./setup.sh                 # venv, TS build, optional grok plugin install --trust
+./setup.sh                 # venv + optional grok plugin install --trust
 
 # From another workspace, after install + enable in /plugins:
 #   grok --agent cybergrok:Cybergrok
@@ -55,7 +54,7 @@ Or work inside this checkout:
 /cybergrok-doctor
 ```
 
-`./cybergrok` selects the **Cybergrok session agent**. Project plugins/hooks/MCP need folder trust (`--trust` / `/hooks-trust`). A model-chosen URL is not in scope until you add it to `scope.yaml`.
+`./cybergrok` selects the **Cybergrok session agent**. Project plugins and hooks need folder trust (`--trust` / `/hooks-trust`). A model-chosen URL is not in scope until you add it to `scope.yaml`.
 
 The plugin ships:
 
@@ -63,7 +62,6 @@ The plugin ships:
 - **Agents** — `Cybergrok`, `recon-scout`, `vuln-hunter`, `reporter`  
 - **Commands** — `/assess` `/recon` `/cybergrok-hunt` `/report` `/cybergrok-doctor`  
 - **Hooks** — session workspace prep + destructive-shell deny  
-- **MCP** — `.mcp.json` → `mcp/launch.cjs` → TypeScript server → Python RPC  
 
 ---
 
@@ -77,7 +75,6 @@ After `./setup.sh`:
 | `secret_scan` | Python — 48-pattern credential miner |
 | `search_knowledge` | Python — offline KB search |
 | `aggregate_reports` | Python — SUMMARY.md + metadata.json |
-| `cybergrok-mcp` | TypeScript MCP (calls Python) |
 | `subfinder` `httpx` `katana` `nuclei` | Downloaded by `tools/update_tools.sh` when available |
 
 ```bash
@@ -99,9 +96,7 @@ Operator ──► Grok Build (Cybergrok agent)
                  ├─ skills/ + AGENTS.md
                  ├─ spawn recon-scout / vuln-hunter / reporter
                  │
-                 ├─ Python CLIs (PATH)
-                 └─ TypeScript MCP
-                        └── python -m cybergrok rpc {op, args}
+                 └─ Python CLIs (PATH)
 ```
 
 Deliverables:
@@ -125,8 +120,6 @@ pip install -e ".[dev]"
 ./lint.sh
 ./typecheck.sh
 ./test.sh
-
-cd mcp && npm install && npm run build
 ```
 
 Legal use only: authorized assessments, bug-bounty programs you are invited to, and your own systems. See `scope.yaml` and `AGENTS.md`.

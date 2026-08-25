@@ -1,6 +1,6 @@
-# 🧰 Tools, Skills & MCP Architecture Reference
+# 🧰 Tools & Skills Architecture Reference
 
-Cybergrok combines a curated offensive security toolchain, deep skill playbooks, and Model Context Protocol (MCP) servers to automate end-to-end vulnerability research and verification.
+Cybergrok combines a curated offensive security toolchain and deep skill playbooks to automate end-to-end vulnerability research and verification.
 
 ---
 
@@ -31,26 +31,9 @@ All native binary security tools reside in `/workspace/tools/bin` and are automa
 
 ---
 
-## 🔌 2. Model Context Protocol (MCP) Servers
+## 🎯 2. Offensive Skills (200+ Modules)
 
-Cybergrok natively integrates MCP servers for client-side evaluation, structured system access, and external AI assistant integration:
-
-1. **Cybergrok Native MCP Server (`cybergrok-mcp`)**:
-   * High-speed, Go-native JSON-RPC 2.0 MCP server exposing **10 specialized security tools**, 2 resources, and 2 prompts.
-   * Compatible with **all AI providers** (Claude, GPT-4o, DeepSeek, Gemini, Llama) and clients (OpenCode, Cursor, Claude Desktop, Windsurf, Cline, Roo Code, Claude Code CLI, Continue.dev, Zed, Kilo Code, Grok Build, Codex, Google Antigravity).
-   * **MCP launch**: `node mcp/launch.cjs` or `python scripts/setup_mcp.py`.
-   * See [docs/MCP_SETUP.md](MCP_SETUP.md) for full guide and CLI options.
-2. **Browser MCP (`@modelcontextprotocol/server-puppeteer`)**:
-   * Launches headless Chromium in container isolation.
-   * Performs DOM tree inspection, automated button clicks, form submissions, and screenshot PoC generation.
-3. **Filesystem MCP (`@modelcontextprotocol/server-filesystem`)**:
-   * Provides structured read/write access to `/workspace` targets, logs, and reporting artifacts.
-
----
-
-## 🎯 3. Offensive Skills (200+ Modules)
-
-Skills reside in `skills/` and load through the Grok Build plugin (`plugin.json`). The core engine is Python + TypeScript.
+Skills reside in `skills/` and load through the Grok Build plugin (`plugin.json`). The core engine is Python.
 
 ### Invoking Specific Playbooks:
 Operators can prompt the agent to utilize specific methodologies:
@@ -60,7 +43,7 @@ Operators can prompt the agent to utilize specific methodologies:
 
 ---
 
-## 📊 4. Automated Report Aggregator (`aggregate_reports`)
+## 📊 3. Automated Report Aggregator (`aggregate_reports`)
 
 Cybergrok includes a built-in report aggregator that automatically parses individual vulnerability reports and generates an executive summary:
 
@@ -78,7 +61,7 @@ Outputs generated in `reports/<TARGET_SLUG>/`:
 
 ---
 
-## 📑 5. Automated PDF & HTML Deliverable Generator (`generate_pdf.py`)
+## 📑 4. Automated PDF & HTML Deliverable Generator (`generate_pdf.py`)
 
 Transforms structured markdown reports into an executive PDF report and interactive HTML dashboard:
 
@@ -99,7 +82,7 @@ Outputs generated in `reports/<TARGET_SLUG>/`:
 
 ---
 
-## 🔄 6. Toolchain & Template Auto-Updaters
+## 🔄 5. Toolchain & Template Auto-Updaters
 
 Automates downloading and updating ProjectDiscovery binaries (`subfinder`, `httpx`, `katana`, `nuclei`) and Nuclei templates:
 
@@ -114,7 +97,7 @@ Automates downloading and updating ProjectDiscovery binaries (`subfinder`, `http
 
 ---
 
-## 🔍 7. Skill Pack Integrity Auditor (`validate_skills.py`)
+## 🔍 6. Skill Pack Integrity Auditor (`validate_skills.py`)
 
 Verifies the integrity of all 200+ skill folders in `skills/`:
 
@@ -125,7 +108,7 @@ Reports total loaded skills, active skills, and highlights any missing or corrup
 
 ---
 
-## 🩺 8. Universal Health Check & Auto-Repair (`doctor.py`)
+## 🩺 7. Universal Health Check & Auto-Repair (`doctor.py`)
 
 Inspects environment health across Windows, Linux, and macOS, and auto-repairs missing directories, toolchains, and configurations:
 

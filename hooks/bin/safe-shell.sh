@@ -33,5 +33,11 @@ if printf '%s' "${CMD}" | grep -Eqi \
   exit 2
 fi
 
+if printf '%s' "${CMD}" | grep -Eqi \
+  '(>|>>).*scope\.ya?ml|tee[[:space:]].*scope\.ya?ml|(cp|mv|install|install[[:space:]])[[:space:]].*scope\.ya?ml'; then
+  echo '{"decision":"deny","reason":"Cybergrok refuses shell writes to scope.yaml; the operator owns the allowlist."}'
+  exit 2
+fi
+
 echo '{"decision":"allow"}'
 exit 0

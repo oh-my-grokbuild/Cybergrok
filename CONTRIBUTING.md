@@ -57,13 +57,8 @@ git checkout -b fix/your-fix-name
   ```bash
   pip install -e ".[dev]"
   ./lint.sh
-  ./typecheck.sh --python
+  ./typecheck.sh
   ./test.sh
-  ```
-* Typecheck the TypeScript MCP server:
-  ```bash
-  (cd mcp && npm ci)
-  ./typecheck.sh --ts
   ```
 * On Windows, test compatibility:
   ```powershell

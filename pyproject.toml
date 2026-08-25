@@ -44,7 +44,7 @@ testpaths = ["python/tests"]
 pythonpath = ["python"]
 
 # --- Ruff (lint + format) ---
-# First-party only. Vendored knowledge/, MCP, and venvs are out of scope.
+# First-party only. Vendored knowledge/ and venvs are out of scope.
 
 [tool.ruff]
 target-version = "py314"
@@ -54,7 +54,6 @@ extend-exclude = [
     "knowledge",
     "venv",
     ".venv",
-    "mcp",
     ".grok",
     "reports",
     "recon",
@@ -183,7 +182,6 @@ exclude = [
     "knowledge",
     "venv",
     ".venv",
-    "mcp",
     ".grok",
     "reports",
     "recon",
@@ -225,7 +223,6 @@ exclude = [
     "knowledge",
     "venv",
     ".venv",
-    "mcp",
     ".grok",
     "reports",
     "recon",

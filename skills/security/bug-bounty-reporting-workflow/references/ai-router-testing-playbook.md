@@ -202,7 +202,7 @@ curl --max-time 15 -A "Mozilla/5.0"  # Always use browser UA
 - **Reconnaissance:** `subfinder`, `dnsx`, `httpx`
 - **Crawling:** `katana` (with rate limiting)
 - **API Testing:** `curl`
-- **Browser Testing:** Browser MCP for JavaScript-heavy sites
+- **Browser Testing:** Playwright for JavaScript-heavy sites
 
 ## Case Studies
 - **AI Gateway Control Plane:** See `references/ai-gateway-control-plane-assessment.md`

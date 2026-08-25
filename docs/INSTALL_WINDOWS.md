@@ -20,10 +20,8 @@ This guide provides step-by-step instructions for running **Cybergrok** on **Win
 2. **Python 3.11 or newer**:
    - Download from [python.org](https://www.python.org/downloads/).
    - ⚠️ **Important**: Check the box **"Add Python to PATH"** during installation.
-3. **Node.js (Optional, for Browser MCP & Puppeteer)**:
-   - Download LTS from [nodejs.org](https://nodejs.org/).
-4. **Go 1.22+ (Optional, for Native Go Core Tools)**:
-   - Download from [go.dev](https://go.dev/dl/). If present, `setup_windows.ps1` will automatically compile native Windows `.exe` tools (`smart_pipe.exe`, `secret_scan.exe`, `search_knowledge.exe`, `aggregate_reports.exe`).
+3. **Playwright Chromium** (optional, for HTML-to-PDF reports):
+   - Installed by `setup.sh` / `setup_windows.ps1` when Playwright is available.
 
 ---
 

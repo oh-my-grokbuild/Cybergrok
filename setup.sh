@@ -8,11 +8,15 @@ GROK_HOME="${GROK_HOME:-$HOME/.grok}"
 AGENTS=(cybergrok recon-scout vuln-hunter reporter)
 
 echo "========================================================"
-echo "  Cybergrok setup (Grok Build + Python + TypeScript)"
+echo "  Cybergrok setup (Grok Build + Python)"
 echo "========================================================"
 
 if ! command -v python3 >/dev/null 2>&1; then
-    echo "Error: Python 3.10+ is required."
+    echo "Error: Python 3.14+ is required."
+    exit 1
+fi
+if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 14) else 1)'; then
+    echo "Error: Python 3.14+ is required (found $(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])'))."
     exit 1
 fi
 
@@ -38,18 +42,8 @@ link_plugin_tree() {
     local plugin="$ROOT/.grok/plugins/cybergrok"
     mkdir -p "$plugin"
     cp "$ROOT/plugin.json" "$plugin/plugin.json"
-    cat > "$plugin/.mcp.json" <<'JSON'
-{
-  "mcpServers": {
-    "cybergrok": {
-      "command": "node",
-      "args": ["${GROK_PLUGIN_ROOT}/mcp/launch.cjs"]
-    }
-  }
-}
-JSON
     local name
-    for name in agents commands hooks skills scripts mcp python AGENTS.md knowledge templates; do
+    for name in agents commands hooks skills scripts python AGENTS.md knowledge templates; do
         ln -sfn "../../../${name}" "$plugin/${name}"
     done
 }
@@ -60,18 +54,8 @@ stage_plugin_package() {
     rm -rf "$stage"
     mkdir -p "$stage"
     cp "$ROOT/plugin.json" "$stage/plugin.json"
-    cat > "$stage/.mcp.json" <<'JSON'
-{
-  "mcpServers": {
-    "cybergrok": {
-      "command": "node",
-      "args": ["${GROK_PLUGIN_ROOT}/mcp/launch.cjs"]
-    }
-  }
-}
-JSON
     local name
-    for name in agents commands hooks skills scripts mcp python AGENTS.md knowledge templates; do
+    for name in agents commands hooks skills scripts python AGENTS.md knowledge templates; do
         if [ -e "$ROOT/$name" ]; then
             cp -a "$ROOT/$name" "$stage/$name"
         fi
@@ -103,13 +87,6 @@ if command -v playwright >/dev/null 2>&1; then
     playwright install chromium 2>/dev/null || true
 fi
 
-if command -v npm >/dev/null 2>&1; then
-    echo "Building TypeScript MCP server..."
-    (cd "$ROOT/mcp" && npm install --silent && npm run build)
-else
-    echo "npm not found — skip TypeScript MCP build (install Node 18+ and re-run)."
-fi
-
 if [ ! -f "$ROOT/.env" ] && [ -f "$ROOT/.env.example" ]; then
     cp "$ROOT/.env.example" "$ROOT/.env"
     echo "Initialized .env from .env.example"
@@ -119,13 +96,14 @@ if [ -f "$ROOT/tools/update_tools.sh" ]; then
     bash "$ROOT/tools/update_tools.sh" || true
 fi
 
-chmod +x "$ROOT/cybergrok" "$ROOT/env.sh" "$ROOT/scripts/cybergrok-mcp.sh" \
+chmod +x "$ROOT/cybergrok" "$ROOT/env.sh" \
          "$ROOT/lint.sh" "$ROOT/typecheck.sh" "$ROOT/test.sh" \
          "$ROOT/hooks/bin/"*.sh 2>/dev/null || true
 
 if command -v grok >/dev/null 2>&1; then
     echo "Registering the Cybergrok plugin with Grok Build..."
     STAGE="$(stage_plugin_package)"
+    grok plugin uninstall cybergrok 2>/dev/null || true
     if grok plugin install "$STAGE" --trust; then
         grok plugin enable cybergrok 2>/dev/null || true
         echo "  plugin install --trust: ok (slim package, no .env/venv/.git)"

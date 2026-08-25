@@ -24,4 +24,4 @@ else
     echo "  Grok Build: not on PATH"
 fi
 echo "  Plugin: $SCRIPT_DIR/plugin.json"
-echo "  Tools: tools/bin (smart_pipe, secret_scan, search_knowledge, aggregate_reports, cybergrok-mcp)"
+echo "  Tools: tools/bin (smart_pipe, secret_scan, search_knowledge, aggregate_reports)"

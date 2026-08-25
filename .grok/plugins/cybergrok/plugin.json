@@ -1,7 +1,7 @@
 {
   "name": "cybergrok",
   "version": "1.0.0",
-  "description": "Autonomous offensive security plugin for Grok Build. Session agent Cybergrok, Python tools, TypeScript MCP.",
+  "description": "Autonomous offensive security plugin for Grok Build. Session agent Cybergrok and Python tools.",
   "author": {
     "name": "Grok Build Workforce"
   },
